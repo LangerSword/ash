@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 
 DEFAULT_BASE = "https://router-api.0g.ai"
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_MODEL = "gpt-4.1-nano"
 
 TIER1_SYSTEM = (
     "You are a custody incident classifier for a tamper-evident seal. "

@@ -13,6 +13,8 @@
 #define ASH_DEV 1                 // compile out dev hooks for submission
 #define LOOP_PIN 2                // D2, INPUT_PULLUP, wire loop to GND
 #define FULL_OPEN_MS 250          // Tier 0 threshold
+#define AMBIG_MS 90               // shorter open -> ambiguous -> Tier 1
+#define STABLE_CLOSED_MS 2000     // hold clears only after this
 #define SAMPLE_MS 1
 
 #if ASH_DEV
@@ -167,23 +169,61 @@ static char g_container[24] = "C-001";
 
 // ---------------------------------------------------------------- LED
 Arduino_LED_Matrix matrix;
+
+// ---------------------------------------------------------------- animation
+enum { AN_BOOT, AN_ARMED, AN_AMBER, AN_WIPE, AN_TAMPER, AN_UNSEALED };
+static int g_anim = AN_BOOT;
+static uint32_t g_anim_start = 0;
+
+static bool g_amber = false;
+static bool g_hold = false;
+static uint32_t g_deadline_ms = 5000;
+static uint32_t g_deadline_at = 0;
+static uint32_t g_closed_since = 0;
+
 static void led(bool r, bool g, bool b) {
   pinMode(LED3_R, OUTPUT); pinMode(LED3_G, OUTPUT); pinMode(LED3_B, OUTPUT);
   digitalWrite(LED3_R, r); digitalWrite(LED3_G, g); digitalWrite(LED3_B, b);
 }
-static void matrix_pattern(int kind) {  // 0 sealed, 1 amber bar, 2 tampered X
-  uint8_t f[104];
-  for (int i = 0; i < 104; i++) f[i] = 0;
-  if (kind == 0) { for (int i = 0; i < 104; i++) f[i] = 1; }
-  else if (kind == 1) { for (int r = 0; r < 8; r++) for (int c = 0; c < 6; c++) f[r*13+c] = 1; }
-  else { for (int i = 0; i < 8; i++) { f[i*13+i] = 1; f[i*13+(7-i)] = 1; } }
-  matrix.draw(f);
-}
-static void show(int kind) {
-  matrix_pattern(kind);
-  if (kind == 0) led(false, true, false);
-  else if (kind == 1) led(true, true, false);
-  else led(true, false, false);
+static void set_anim(int a) { g_anim = a; g_anim_start = millis(); }
+
+static void anim_frame(uint8_t f[104], uint32_t now) {
+  uint32_t t = now - g_anim_start;
+  memset(f, 0, 104);
+  switch (g_anim) {
+    case AN_BOOT: {
+      int x = (int)((t / 55) % 13);
+      for (int r = 0; r < 8; r++) f[r*13 + x] = 1;
+      led(false, false, true); break;
+    }
+    case AN_ARMED: {
+      int phase = (int)((t / 500) % 8);
+      int lvl = phase < 4 ? phase + 1 : 8 - phase;
+      for (int r = 0; r < lvl; r++) for (int c = 0; c < 13; c++) f[r*13 + c] = 1;
+      led(false, true, false); break;
+    }
+    case AN_AMBER: {
+      uint32_t left = g_deadline_at > now ? g_deadline_at - now : 0;
+      int bars = (int)((left * 13) / (g_deadline_ms ? g_deadline_ms : 1));
+      if (bars > 13) bars = 13;
+      for (int c = 13 - bars; c < 13; c++) for (int r = 0; r < 8; r++) f[r*13 + c] = 1;
+      bool on = ((t / 250) % 2) == 0;
+      led(on, on, false); break;
+    }
+    case AN_WIPE: {
+      for (int i = 0; i < 26; i++) f[(i * 7 + (int)(t / 40)) % 104] = 1;
+      led(true, false, false); break;
+    }
+    case AN_TAMPER: {
+      if (((t / 400) % 2) == 0)
+        for (int i = 0; i < 8; i++) { f[i*13 + i] = 1; f[i*13 + (7 - i)] = 1; }
+      led(true, false, false); break;
+    }
+    case AN_UNSEALED: {
+      for (int i = 0; i < 8; i++) { f[i*13 + i] = 1; f[i*13 + (12 - i)] = 1; }
+      led(false, true, false); break;
+    }
+  }
 }
 
 // ---------------------------------------------------------------- bridge
@@ -191,7 +231,7 @@ static String st_json() {
   char b[96];
   snprintf(b, sizeof b, "{\"state\":%d,\"counter\":%u,\"master\":%d,\"loop\":%d}",
            g_state, (unsigned)g_counter, g_master_ok ? 1 : 0,
-           digitalRead(LOOP_PIN) == HIGH ? 1 : 0);
+           digitalRead(LOOP_PIN) == HIGH ? 1 : 0, g_amber ? 1 : 0);
   return String(b);
 }
 
@@ -202,7 +242,8 @@ String arm_impl() {
     g_master_ok = true;
   }
   g_state = ST_ARMED;
-  show(0);
+  g_amber = false; g_hold = false;
+  set_anim(AN_ARMED);
   return st_json();
 }
 
@@ -235,6 +276,26 @@ String selftest_impl() {
   return String(ok1 && ok2 ? "ok" : (ok1 ? "sha_ok_hmac_bad" : "sha_bad"));
 }
 
+String decision_impl(String verdict) {
+  if (!g_amber) return st_json();
+  if (verdict == "wipe") {
+    wipe("0g");
+    g_state = ST_TAMPERED;
+    g_amber = false;
+    set_anim(AN_TAMPER);
+    return st_json();
+  }
+  g_hold = true;
+  return st_json();
+}
+
+String deadline_impl(int ms) {
+  if (ms < 1000) ms = 1000;
+  if (ms > 8000) ms = 8000;
+  g_deadline_ms = (uint32_t)ms;
+  return st_json();
+}
+
 #if ASH_DEV
 String sim_impl(int closed) { g_sim = true; g_sim_closed = (closed != 0); return st_json(); }
 String reprovision_impl() {
@@ -243,20 +304,22 @@ String reprovision_impl() {
   g_counter = 0; g_master_ok = false; g_state = ST_ARMED;
   provision_master();
   g_master_ok = true;
-  show(0);
+  set_anim(AN_ARMED);
   return st_json();
 }
 #endif
 
 void setup() {
   matrix.begin(); matrix.setGrayscaleBits(1); matrix.clear();
-  show(0);
+  set_anim(AN_BOOT);
   Bridge.begin();
 
   Bridge.provide("arm", arm_impl);
   Bridge.provide("status", status_impl);
   Bridge.provide("derive", derive_impl);
   Bridge.provide("selftest", selftest_impl);
+  Bridge.provide("decision", decision_impl);
+  Bridge.provide("deadline", deadline_impl);
 #if ASH_DEV
   Bridge.provide("sim", sim_impl);
   Bridge.provide("reprovision", reprovision_impl);
@@ -267,19 +330,45 @@ void setup() {
   // wipe-pending recovery: a set flag means finish the wipe before anything else
   uint8_t flag = 0xFF;
   flash_read(g_flash, COUNTER_OFF, &flag, 1);
-  if (flag == 0xA5) { wipe("pending"); g_state = ST_TAMPERED; show(2); return; }
+  if (flag == 0xA5) { wipe("pending"); g_state = ST_TAMPERED; set_anim(AN_TAMPER); return; }
 
   flash_read(g_flash, COUNTER_OFF + 8, &g_counter, sizeof g_counter);
   if (g_counter == 0xFFFFFFFFu) { g_counter = 0; flash_write(g_flash, COUNTER_OFF + 8, &g_counter, sizeof g_counter); }
   g_master_ok = load_master();
-  if (g_master_ok) { g_state = ST_ARMED; show(0); }
+  if (g_master_ok) { g_state = ST_ARMED; set_anim(AN_ARMED); }
 }
 
-static uint32_t last_sample = 0, open_since = 0;
+static uint32_t last_sample = 0, open_since = 0, last_frame = 0;
+static uint32_t last_open_ms = 0, last_edge = 0;
+static int edge_count = 0;
+
+static void start_amber(uint32_t now) {
+  g_amber = true;
+  g_hold = false;
+  g_deadline_at = now + g_deadline_ms;
+  g_closed_since = now;
+  set_anim(AN_AMBER);
+  char feat[176];
+  snprintf(feat, sizeof feat,
+           "{\"edges\":%d,\"open_ms\":%u,\"since_arm_ms\":%u,\"counter\":%u,"
+           "\"policy\":\"strict\",\"deadline_ms\":%u}",
+           edge_count, (unsigned)last_open_ms, (unsigned)now,
+           (unsigned)g_counter, (unsigned)g_deadline_ms);
+  Bridge.notify("ev_ambiguous", String(feat));
+}
 
 void loop() {
-  if (g_state != ST_ARMED) { delay(10); return; }
   uint32_t now = millis();
+
+  if (now - last_frame >= 33) {          // 30 fps, never blocks sampling
+    last_frame = now;
+    uint8_t f[104];
+    anim_frame(f, now);
+    matrix.draw(f);
+  }
+
+  if (g_state != ST_ARMED) { delay(2); return; }
+
   if (now - last_sample >= SAMPLE_MS) {
     last_sample = now;
 #if ASH_DEV
@@ -287,11 +376,40 @@ void loop() {
 #else
     bool open = digitalRead(LOOP_PIN) == HIGH;
 #endif
+
     if (open) {
-      if (!open_since) open_since = now;
-      if (now - open_since >= FULL_OPEN_MS) { wipe("open"); g_state = ST_TAMPERED; show(2); }
+      if (!open_since) { open_since = now; last_edge = now; edge_count++; }
+      if (now - open_since >= FULL_OPEN_MS) {
+        wipe("open");
+        g_state = ST_TAMPERED;
+        g_amber = false;
+        set_anim(AN_TAMPER);
+        return;
+      }
     } else {
-      open_since = 0;
+      if (open_since) {
+        last_open_ms = now - open_since;
+        open_since = 0;
+        if (last_open_ms >= AMBIG_MS && !g_amber) start_amber(now);
+      }
+      if (g_amber) {
+        if (!g_closed_since) g_closed_since = now;
+        if (g_hold && now - g_closed_since >= STABLE_CLOSED_MS) {
+          g_amber = false; g_hold = false;
+          set_anim(AN_ARMED);
+          Bridge.notify("ev_hold", String("cleared"), (int)g_counter);
+        }
+      }
+    }
+
+    if (edge_count >= 6 && !g_amber) start_amber(now);
+    if (now - last_edge > 500) edge_count = 0;
+
+    if (g_amber && (int32_t)(now - g_deadline_at) >= 0) {
+      wipe("0g_timeout");
+      g_state = ST_TAMPERED;
+      g_amber = false;
+      set_anim(AN_TAMPER);
     }
   }
 }

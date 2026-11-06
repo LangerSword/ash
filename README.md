@@ -61,6 +61,20 @@ Note: `glm-5.2` is a reasoning model (254 reasoning tokens, ~7 s) and misses a 5
 gemini-2.5-flash-lite returns strict JSON in ~1.8 s. The Router does not surface a TEE verdict on
 this provider, so `tee_verified` is recorded as `unknown`, never `true`.
 
+## Tier 1 on hardware (measured 6 Nov, 11:12 UTC)
+
+```
+ambiguous   edges=1 open_ms=130 deadline=6000
+0G verdict  hold / handling   request_id 5990999b-06cd-4022-835b-484d15f08a55   relay 2449 ms
+hold        cleared after 2 s stable closed -> state 1 (ARMED)
+ambiguous   again, no decision
+timeout     wipe at the deadline -> state 3, counter 1, master 0   (fail-closed)
+```
+
+Note: the app container cannot do TLS on this platform (WRONG_VERSION_NUMBER on every HTTPS
+origin), so decisions go container -> host forwarder :9001 -> USB -> laptop relay -> 0G.
+Board-direct TLS is flaky on venue WiFi. The laptop relay is the documented egress.
+
 ## Layout
 
 ```
