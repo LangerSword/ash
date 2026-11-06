@@ -161,7 +161,26 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self._send(204, {})
 
+    def _static(self):
+        import mimetypes
+        rel = self.path.split("?", 1)[0]
+        if rel in ("/site", "/site/"):
+            rel = "/site/index.html"
+        fp = (ROOT / "docs" / rel[len("/site/"):]).resolve()
+        if not str(fp).startswith(str((ROOT / "docs").resolve())) or not fp.is_file():
+            return self._send(404, {"error": "not_found"})
+        data = fp.read_bytes()
+        ctype = mimetypes.guess_type(fp.name)[0] or "application/octet-stream"
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
+        if self.path.startswith("/site"):
+            return self._static()
         if self.path == "/status":
             return self._send(200, svc.mcu.status())
         if self.path == "/ledger":
