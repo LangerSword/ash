@@ -185,7 +185,30 @@ static void led(bool r, bool g, bool b) {
   pinMode(LED3_R, OUTPUT); pinMode(LED3_G, OUTPUT); pinMode(LED3_B, OUTPUT);
   digitalWrite(LED3_R, r); digitalWrite(LED3_G, g); digitalWrite(LED3_B, b);
 }
-static void set_anim(int a) { g_anim = a; g_anim_start = millis(); }
+
+// ---------------------------------------------------------------- host frames
+// The host can push a short animation (the intro) over the bridge. Each frame is
+// 104 bits, packed MSB-first into 13 bytes; the wire form is 26 hex chars/frame.
+#define MAX_INTRO_FRAMES 64
+static uint8_t g_intro[MAX_INTRO_FRAMES][13];
+static int g_intro_n = 0;
+static uint32_t g_intro_fps = 12;
+static uint32_t g_intro_start = 0;
+static int g_anim_saved = AN_ARMED;
+
+static void set_anim(int a) { g_intro_n = 0; g_anim = a; g_anim_start = millis(); }
+
+static inline int hexval(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+
+static inline int fbit(const uint8_t *fr, int i) {
+  return (fr[i >> 3] >> (7 - (i & 7))) & 1;
+}
+
 
 static void anim_frame(uint8_t f[104], uint32_t now) {
   uint32_t t = now - g_anim_start;
@@ -303,6 +326,44 @@ String deadline_impl(int ms) {
   return st_json();
 }
 
+// Wire form: "<fps>:<26 hex>,<26 hex>,..." — 13 bytes per frame, row-major 13x8.
+String frames_impl(String spec) {
+  int colon = spec.indexOf(':');
+  if (colon <= 0) return String("ERR:frames_spec");
+  long fps = spec.substring(0, colon).toInt();
+  if (fps < 1) fps = 1;
+  if (fps > 30) fps = 30;
+
+  int n = 0;
+  int i = colon + 1;
+  int len = (int)spec.length();
+  while (i + 26 <= len && n < MAX_INTRO_FRAMES) {
+    bool ok = true;
+    for (int b = 0; b < 13; b++) {
+      int hi = hexval(spec.charAt(i + b * 2));
+      int lo = hexval(spec.charAt(i + b * 2 + 1));
+      if (hi < 0 || lo < 0) { ok = false; break; }
+      g_intro[n][b] = (uint8_t)((hi << 4) | lo);
+    }
+    if (!ok) break;
+    n++;
+    i += 26;
+    if (i < len && spec.charAt(i) == ',') i++;
+    else break;
+  }
+  if (n == 0) return String("ERR:frames_empty");
+
+  g_anim_saved = g_anim;
+  g_intro_fps = (uint32_t)fps;
+  g_intro_start = millis();
+  g_intro_n = n;                      // last: the draw path keys off this
+
+  char b[64];
+  snprintf(b, sizeof b, "{\"frames\":%d,\"fps\":%ld}", n, fps);
+  return String(b);
+}
+
+
 #if ASH_DEV
 String sim_impl(int closed) { g_sim = true; g_sim_closed = (closed != 0); return st_json(); }
 String reprovision_impl() {
@@ -331,6 +392,7 @@ void setup() {
   Bridge.provide("selftest", selftest_impl);
   Bridge.provide("decision", decision_impl);
   Bridge.provide("deadline", deadline_impl);
+  Bridge.provide("frames", frames_impl);
 #if ASH_DEV
   Bridge.provide("sim", sim_impl);
   Bridge.provide("reprovision", reprovision_impl);
@@ -374,7 +436,19 @@ void loop() {
   if (now - last_frame >= 33) {          // 30 fps, never blocks sampling
     last_frame = now;
     uint8_t f[104];
-    anim_frame(f, now);
+    if (g_intro_n) {
+      uint32_t idx = (uint32_t)(((uint64_t)(now - g_intro_start) * g_intro_fps) / 1000u);
+      if (idx >= (uint32_t)g_intro_n) {
+        g_intro_n = 0;
+        set_anim(g_anim_saved);          // hand the matrix back to the state animation
+        anim_frame(f, now);
+      } else {
+        const uint8_t *fr = g_intro[idx];
+        for (int i = 0; i < 104; i++) f[i] = (uint8_t)fbit(fr, i);
+      }
+    } else {
+      anim_frame(f, now);
+    }
     matrix.draw(f);
   }
 

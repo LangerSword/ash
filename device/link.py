@@ -26,6 +26,7 @@ class DeviceLink:
         self.detail = ""
         self.serial_seen = ""
         self._stop = False
+        self.started = False
         self._thread = threading.Thread(target=self._run, daemon=True)
 
     # ------------------------------------------------------------------ adb
@@ -83,6 +84,7 @@ class DeviceLink:
 
     # ------------------------------------------------------------------ api
     def start(self) -> "DeviceLink":
+        self.started = True
         self._thread.start()
         return self
 
@@ -90,6 +92,10 @@ class DeviceLink:
         self._stop = True
 
     def snapshot(self) -> dict:
+        if not self.started:
+            return {"state": "external", "serial": "", "api": "", "mcu": None,
+                    "detail": "device link is owned by another process",
+                    "at": int(time.time())}
         return {
             "state": self.state,
             "serial": self.serial_seen,

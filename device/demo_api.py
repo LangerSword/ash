@@ -28,7 +28,12 @@ from link import DeviceLink  # noqa: E402
 import x402_hedera  # noqa: E402
 
 
-LINK = DeviceLink(os.environ.get("ASH_SERIAL", "3017640407")).start()
+LINK = DeviceLink(os.environ.get("ASH_SERIAL", "3017640407"))
+if os.environ.get("ASH_LINK", "1") != "0":
+    LINK.start()
+else:
+    print("LINK: owned externally (ASH_LINK=0)", flush=True)
+
 
 
 class HttpMcu:
@@ -60,8 +65,8 @@ class HttpMcu:
         return str(self._post("/derive", {"nonce": nonce_hex})["key"])
 
 ROOT = Path(__file__).resolve().parent.parent
-DEMO = ROOT / "demo"
-DEMO.mkdir(exist_ok=True)
+DEMO = Path(os.environ.get("ASH_STATE_DIR") or (ROOT / "demo"))
+DEMO.mkdir(parents=True, exist_ok=True)
 STORE = DEMO / "store"
 PAYLOAD = DEMO / "payload.bin"
 
@@ -231,6 +236,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/ledger":
             text = svc.ledger.read_text() if svc.ledger.exists() else ""
             return self._send(200, {"records": [json.loads(x) for x in text.splitlines() if x]})
+        if self.path == "/ledger/verify":
+            ok, where = svc.verify_ledger()
+            n = len([x for x in (svc.ledger.read_text() if svc.ledger.exists() else "").splitlines() if x])
+            return self._send(200 if ok else 409,
+                              {"ok": ok, "records": n, "detail": where})
         if self.path == "/evidence":
             return self._send(200, {
                 "erase_us": 874, "wipe_us": 1321,
@@ -308,7 +318,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._send(400, {"error": "bad_json"})
 
-        if self.path in ("/sim", "/flex", "/reprovision"):
+        if self.path in ("/sim", "/flex", "/reprovision", "/frame"):
             try:
                 return self._send(200, svc.mcu._post(self.path, body))
             except Exception as e:
