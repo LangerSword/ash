@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ash — a seal that destroys the data if you open it</title>
+<meta name="description" content="A tamper-responsive seal for confidential shipments. Break the loop and the key is gone.">
+<style>
+  :root{--bg:#0b0b0c;--surface:#121214;--border:#222226;--text:#e8e8e8;--muted:#8a8a8a;--signal:#5ad46a;--amber:#ffb020;--alert:#ff5c5c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
+  main{max-width:760px;margin:0 auto;padding:64px 24px}
+  h1{font-size:22px;letter-spacing:.14em;margin:0 0 4px}
+  .chip{display:inline-block;border:1px solid var(--border);padding:2px 8px;font-size:12px;color:var(--muted)}
+  .chip[data-state="ARMED"]{color:var(--signal);border-color:var(--signal)}
+  .chip[data-state="TAMPERED"]{color:var(--alert);border-color:var(--alert)}
+  .lede{font-size:32px;line-height:1.2;letter-spacing:-.02em;margin:40px 0 16px;max-width:22ch}
+  p{color:var(--muted);max-width:62ch}
+  .rule{height:1px;background:var(--border);margin:48px 0}
+  .facts{display:flex;gap:24px;flex-wrap:wrap;color:var(--text);font-variant-numeric:tabular-nums}
+  .facts span{color:var(--muted)}
+  footer{margin-top:64px;color:var(--muted);font-size:12px}
+  a{color:var(--text)}
+</style>
+</head>
+<body>
+<main>
+  <h1>ASH</h1>
+  <div class="chip" id="status" data-state="OFFLINE">OFFLINE</div>
+
+  <div class="lede">A seal that destroys the data if you open it.</div>
+  <p>The key lives in the chip. Cut the loop and it is gone in a millisecond. Bend it, and a model decides whether that was handling or intrusion — against a deadline, where silence means wipe.</p>
+
+  <div class="facts">
+    <div>1 321 µs <span>wipe</span></div>
+    <div>2.05 s <span>0G decision</span></div>
+    <div>5 000 ms <span>deadline</span></div>
+  </div>
+
+  <div class="rule"></div>
+  <p><strong style="color:var(--text)">Site in progress.</strong> The full panel — live matrix mirror, seal/unseal, ledger, wallet proof — is being built on <code>site/</code> and will replace this page. The numbers above were measured on the board during ETHGlobal Mumbai.</p>
+
+  <footer>
+    <a href="https://github.com/LangerSword/ash">github.com/LangerSword/ash</a> · 0G Physical AI · World IDKit · Hedera x402 · Mumbai, 6–7 Nov 2026
+  </footer>
+</main>
+<script>
+  const api = window.ASH_API || "";
+  const el = document.getElementById("status");
+  async function tick() {
+    if (!api) { el.dataset.state = "OFFLINE"; el.textContent = "OFFLINE"; return; }
+    try {
+      const r = await fetch(api + "/status", { cache: "no-store" });
+      const d = await r.json();
+      const s = d.state === 1 ? "ARMED" : d.state === 3 ? "TAMPERED" : "OFFLINE";
+      el.dataset.state = s; el.textContent = s;
+    } catch { el.dataset.state = "OFFLINE"; el.textContent = "OFFLINE"; }
+  }
+  setInterval(tick, 3000); tick();
+</script>
+</body>
+</html>
