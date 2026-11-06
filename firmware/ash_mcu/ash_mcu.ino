@@ -227,11 +227,18 @@ static void anim_frame(uint8_t f[104], uint32_t now) {
 }
 
 // ---------------------------------------------------------------- bridge
+static bool loop_open() {
+#if ASH_DEV
+  if (g_sim) return !g_sim_closed;
+#endif
+  return digitalRead(LOOP_PIN) == HIGH;
+}
+
 static String st_json() {
-  char b[96];
-  snprintf(b, sizeof b, "{\"state\":%d,\"counter\":%u,\"master\":%d,\"loop\":%d}",
+  char b[128];
+  snprintf(b, sizeof b, "{\"state\":%d,\"counter\":%u,\"master\":%d,\"loop\":%d,\"amber\":%d}",
            g_state, (unsigned)g_counter, g_master_ok ? 1 : 0,
-           digitalRead(LOOP_PIN) == HIGH ? 1 : 0, g_amber ? 1 : 0);
+           loop_open() ? 1 : 0, g_amber ? 1 : 0);
   return String(b);
 }
 
@@ -302,6 +309,7 @@ String reprovision_impl() {
   flash_erase(g_flash, MASTER_OFF, 8192);
   flash_erase(g_flash, COUNTER_OFF, 8192);
   g_counter = 0; g_master_ok = false; g_state = ST_ARMED;
+  g_amber = false; g_hold = false; g_deadline_at = 0;
 #if ASH_DEV
   g_sim = true; g_sim_closed = true;   // close the simulated loop before re-arming
 #endif
@@ -374,11 +382,7 @@ void loop() {
 
   if (now - last_sample >= SAMPLE_MS) {
     last_sample = now;
-#if ASH_DEV
-    bool open = g_sim ? !g_sim_closed : (digitalRead(LOOP_PIN) == HIGH);
-#else
-    bool open = digitalRead(LOOP_PIN) == HIGH;
-#endif
+    bool open = loop_open();
 
     if (open) {
       if (!open_since) { open_since = now; last_edge = now; edge_count++; }

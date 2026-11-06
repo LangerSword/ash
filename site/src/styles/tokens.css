@@ -1,0 +1,26 @@
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0b0c;
+  --surface: #121214;
+  --surface-2: #17171a;
+  --border: #222226;
+  --border-strong: #2e2e33;
+
+  --text: #e8e8e8;
+  --muted: #8a8a8a;
+  --dim: #5f5f66;
+
+  --signal: #5ad46a;
+  --amber: #ffb020;
+  --alert: #ff5c5c;
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --max: 1080px;
+  --gutter: 24px;
+  --radius: 4px;
+
+  --dur-fast: 120ms;
+  --dur-med: 240ms;
+}

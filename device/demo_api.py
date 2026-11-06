@@ -172,8 +172,11 @@ class Handler(BaseHTTPRequestHandler):
         rel = self.path.split("?", 1)[0]
         if rel in ("/site", "/site/"):
             rel = "/site/index.html"
-        fp = (ROOT / "docs" / rel[len("/site/"):]).resolve()
-        if not str(fp).startswith(str((ROOT / "docs").resolve())) or not fp.is_file():
+        root = ROOT / "site" / "dist"
+        if not (root / "index.html").exists():
+            root = ROOT / "docs"
+        fp = (root / rel[len("/site/"):]).resolve()
+        if not str(fp).startswith(str(root.resolve())) or not fp.is_file():
             return self._send(404, {"error": "not_found"})
         data = fp.read_bytes()
         ctype = mimetypes.guess_type(fp.name)[0] or "application/octet-stream"
@@ -288,7 +291,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._send(400, {"error": "bad_json"})
 
-        if self.path in ("/sim", "/reprovision"):
+        if self.path in ("/sim", "/flex", "/reprovision"):
             try:
                 return self._send(200, svc.mcu._post(self.path, body))
             except Exception as e:
