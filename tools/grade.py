@@ -313,6 +313,40 @@ def check_ledger() -> Result:
     return Result("ledger chain verifies", bool(d.get("ok")) and n >= 1, f"ok={d.get('ok')}, records={n}")
 
 
+def check_hardware_wipe() -> Result:
+    """Opt-in (ASH_GRADE_HW=1): erase the master for real, then re-arm.
+
+    Destructive by design: the whole point is that the key does not survive.
+    """
+    if os.environ.get("ASH_GRADE_HW") != "1":
+        return Result("hardware wipe (opt-in ASH_GRADE_HW=1)", True, "skipped; source-level check only")
+    code, body = post(f"{API}/sim", {"closed": 0})
+    if code not in (200, 503):
+        return Result("hardware wipe", False, f"sim HTTP {code}: {body[:80]!r}")
+    wiped = False
+    for _ in range(20):
+        time.sleep(0.2)
+        c, b = get(f"{API}/status")
+        if c != 200:
+            continue
+        d = json.loads(b)
+        if d.get("master") == 0 and d.get("state") == 3:
+            wiped = True
+            break
+    rearmed = False
+    for _ in range(3):
+        post(f"{API}/reprovision")
+        for _ in range(10):
+            time.sleep(0.4)
+            c, b = get(f"{API}/status")
+            if c == 200 and json.loads(b).get("master") == 1:
+                rearmed = True
+                break
+        if rearmed:
+            break
+    return Result("hardware wipe", wiped and rearmed, f"wiped {wiped}, re-armed {rearmed}")
+
+
 def check_firmware() -> Result:
     fw = (ROOT / "firmware/ash_mcu/ash_mcu.ino").read_text()
     checks = {
@@ -515,6 +549,7 @@ def main() -> int:
         check_bad_payment(),
         check_ledger(),
         check_firmware(),
+        check_hardware_wipe(),
         check_policy(),
     ]
     ctl = controls(ev)

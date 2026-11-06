@@ -1,8 +1,8 @@
 # Ash grade
 
-Run 2026-11-06 20:33 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
+Run 2026-11-06 20:38 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
 
-**Gates: PASS** · **Score: 100/100** (12/12 checks) · **Controls: all caught**
+**Gates: PASS** · **Score: 100/100** (13/13 checks) · **Controls: all caught**
 
 ## Gates (pass/fail, not scored)
 
@@ -27,8 +27,9 @@ Run 2026-11-06 20:33 UTC against https://langersword.github.io/ash/ and https://
 | claimed settlement exists on-chain | pass | 0.0.11340251@1793997107.642204384: SUCCESS, payee +10000000 |
 | x402 challenge matches config | pass | payTo 0.0.11344783, amount 10000000 |
 | malformed payment rejected | pass | HTTP 402: b'{"ok": false, "error": "bad X-PAYMENT: Invalid base64-encoded string: ' |
-| ledger chain verifies | pass | ok=True, records=23 |
+| ledger chain verifies | pass | ok=True, records=24 |
 | firmware has wipe with read-back | pass | missing none |
+| hardware wipe (opt-in ASH_GRADE_HW=1) | pass | skipped; source-level check only |
 | seal/unseal policy oracle | pass | 5/5 rules; regressed impl caught |
 
 ## Not covered by this grade
