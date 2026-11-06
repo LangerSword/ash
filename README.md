@@ -1,127 +1,113 @@
-# Ash — a seal that destroys the data if you open it
+# Ash
 
-A tamper-responsive seal for confidential shipments. A wire loop runs through the case lid into the
-UNO Q's MCU. The payload is encrypted under a key derived from a secret that never leaves the chip.
-A hard break wipes the key in about a millisecond, offline. An ambiguous event is sent to 0G, which
-decides hold or wipe against a hard deadline — and no answer means wipe. Authorised unsealing needs
-World authentication and a 0G release decision. An agent pays $0.01 in USDC over x402 on Hedera to
-read the history and refuse the delivery.
+Ash is a tamper-responsive seal for confidential shipments. The payload key lives in the STM32U585
+inside the case. If the loop breaks, the MCU erases the key. If the event is ambiguous, a 0G model
+decides hold or wipe against a deadline. Unsealing needs a World ID proof and a 0G release decision.
 
-**Status:** live on hardware, hosted, ETHGlobal Mumbai 2026.
+Status: runs on hardware. Site and API are live.
 
-- Site: https://ash.langersword.in/ (Svelte 5 + GSAP, deployed by GitHub Actions)
-- API: https://api.langersword.in (named Cloudflare tunnel to the laptop)
-- Demo script: `demo-script.md` · submission copy: `submission-copy.md`
-- Run locally: `python3 device/demo_api.py` and `cd site && npm run dev`
+| | |
+|---|---|
+| Site | https://ash.langersword.in |
+| API | https://api.langersword.in |
+| Video script | `demo-script.md` |
+| Submission text | `submission-copy.md` |
 
-## Why
+## Flow
 
-Confidential material still moves in boxes. A plastic seal proves nothing, and a server-side delete
-can be paused, rolled back, or subpoenaed. Ash puts the detector and the key in the same offline
-computer, inside the seal.
-
-## Architecture
-
-```
-case lid ── wire loop ──► STM32 (ADC/digital, 200 Hz)
-                            │  Tier 0: break > 250 ms → erase MASTER, read back 0xFF, LED red
-                            │  Tier 1: ambiguous → features → 0G hold|wipe, deadline, fail-closed
-                            │  Tier 2: unseal → World token + 0G release|deny → key
-                            ▼
-                     arduino-router (JSON, 115200)
-                            ▼
-                  MPU (Debian, Python): vault, relay client, World, Hedera
+```mermaid
+flowchart LR
+  L["Wire loop in the lid"] -->|break| M["STM32: erase MASTER<br/>read back 0xFF"]
+  L -->|ambiguous| A["Amber<br/>deadline 5 s"]
+  A -->|features| G["0G model<br/>hold or wipe"]
+  G -->|wipe| M
+  G -->|hold| L
+  P["World ID proof"] --> V["Server verify"]
+  V -->|valid| R["0G release decision"]
+  R --> K["Key released"]
+  M --> H["Hash-chained ledger"]
+  K --> H
+  H -->|x402| T["Paid attestation on Hedera"]
 ```
 
-## What breaks if 0G is removed
+## Response tiers
 
-Nothing detects the ambiguous case, so the seal falls back to a hard rule: any interruption wipes.
-That is safe but unusable for handling, which is why the model sits in the loop.
-
-## Measured facts
-
-- Flash: 8 KB pages; MASTER page at offset 2080768; erase 874 µs, write 254 µs, wipe with read-back 1321 µs.
-- Bridge: 1000 calls, 0 errors, p50 6.19 ms, p95 7.20 ms.
-- Board network: ETHGlobal WiFi, direct HTTPS works (0G 200, World sandbox 200).
-
-## Tier 0 on hardware (measured 6 Nov, 09:15 UTC)
-
-```
-selftest      ok            # SHA-256 and HMAC-SHA256 against published vectors
-status        state=1 counter=0 master=1 loop=0
-derive(x2)    identical      # deterministic, from MCU-held MASTER
-open loop     state=3 counter=1 master=0   # wipe, read-back verified
-derive after  ERR:not_armed  # key is gone
-reprovision   state=1 master=1             # dev-only
-```
-
-## Live 0G decision (measured 6 Nov, 10:50 UTC)
-
-| call | model | latency | request id (from `x_0g_trace`) | decision |
-|---|---|---|---|---|
-| Tier 1 classify | gpt-4.1-mini (default) | 2.05 s | `3538c131-2f3f-4213-ab6e-e70fbf830620` | hold / handling |
-| Tier 2 release | gemini-2.5-flash-lite | 1.88 s | `18f73aef-3789-40e3-987d-178d2174d79f` | release / consistent |
-
-Note: `glm-5.2` is a reasoning model (254 reasoning tokens, ~7 s) and misses a 5 s deadline;
-gemini-2.5-flash-lite returns strict JSON in ~1.8 s. The Router does not surface a TEE verdict on
-this provider, so `tee_verified` is recorded as `unknown`, never `true`.
-
-## Tier 1 on hardware (measured 6 Nov, 11:12 UTC)
-
-```
-ambiguous   edges=1 open_ms=130 deadline=6000
-0G verdict  hold / handling   request_id 5990999b-06cd-4022-835b-484d15f08a55   relay 2449 ms
-hold        cleared after 2 s stable closed -> state 1 (ARMED)
-ambiguous   again, no decision
-timeout     wipe at the deadline -> state 3, counter 1, master 0   (fail-closed)
-```
-
-Note: the app container cannot do TLS on this platform (WRONG_VERSION_NUMBER on every HTTPS
-origin), so decisions go container -> host forwarder :9001 -> USB -> laptop relay -> 0G.
-Board-direct TLS is flaky on venue WiFi. The laptop relay is the documented egress.
-
-## The site
-
-Svelte 5 + Vite + GSAP, dark instrument panel, no framework beyond that. It polls `/device` and
-`/status`, mirrors the board's 13×8 matrix, and drives seal / unseal / cut / reprovision through the
-API. With no board attached it says `DEVICE OFFLINE` and disables the controls.
-
-```bash
-python3 device/demo_api.py          # API on :8080, talks to the board over adb
-cd site && npm install && npm run dev   # site on :5173
-```
-
-`site/public/config.json` holds the API base used by the hosted build. If the tunnel changes, update
-that file and push; Actions redeploys.
-
-## The desktop app
-
-`app/` is the product: a Tauri v2 shell (Rust) with a Svelte 5 UI. It detects the board over adb,
-seals and unseals payloads, mirrors the 13×8 matrix, shows the hash-chained ledger, and ships as one
-AppImage.
-
-```bash
-./scripts/build-appimage.sh          # -> dist/Ash-0.1.0-x86_64.AppImage
-```
-
-It attaches to a running `device/demo_api.py` on :8080, or spawns its own bundled copy on a free port.
-On first contact with the board it plays the Ash signature on the 13×8 matrix, and it starts a stopped
-board app by itself.
-`app/README.md` documents the split between the Rust device link, the Python service and the UI, and
-the endpoints added for it (`POST /frame`, `GET /ledger/verify`, `evidence.mock|world`).
+- **Tier 0. Hard break.** The loop opens. The MCU erases MASTER and reads the page back. No network.
+  No host.
+- **Tier 1. Ambiguous event.** The MCU goes amber and sends a feature vector to 0G. 0G answers hold
+  or wipe within 5 s. A timeout, a network error, or a malformed answer wipes.
+- **Tier 2. Authorised unseal.** The server verifies a World ID proof. 0G returns release or deny.
+  Only release derives the payload key again.
 
 ## Layout
 
 ```
-firmware/ash_mcu/   STM32 sketch (state machine, flash, sensing, host frames)
-firmware/ash_app/   the board's Python bridge (server.py)
-device/             Python service (vault, 0G, World, Hedera)
-app/                Ash Desktop (Tauri + Svelte): the AppImage
-tools/              relay, time sync, test scripts
-docs/               ARCHITECTURE, SECURITY, AI_USE
-scripts/            build-service.sh, build-appimage.sh
+firmware/ash_mcu/  STM32 sketch: state machine, flash wipe, sensing, 13x8 matrix
+firmware/ash_app/  board-side bridge to the host
+device/            Python service: vault, 0G, World, Hedera, HTTP API
+site/              Svelte 5 + GSAP site, built by GitHub Actions
+app/               Tauri v2 desktop shell (in progress)
+tools/             relay, x402 client and facilitator, World helper, grader
+docs/              ARCHITECTURE, SECURITY, AI_USE
 ```
 
-## Setup
+## Run
 
-TODO — filled in as the components land.
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+python3 device/demo_api.py
+curl -s localhost:8080/status
+```
+
+The service finds the board over `adb forward`. Set `ASH_MCU=board` to use it. Without a board it
+reports `absent` and disables the device calls.
+
+## API
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/status` | MCU state, counter, master flag, loop state |
+| GET | `/device` | adb state, serial, forwarded port |
+| POST | `/seal` | encrypt a payload under a derived key |
+| POST | `/unseal` | verify proof, ask 0G, release or refuse |
+| POST | `/sim` | drive the loop for a rehearsal |
+| GET | `/ledger` | hash-chained episode records |
+| GET | `/attestation/{container}` | 402 challenge, then the signed record |
+
+## Measured
+
+| Item | Value |
+|---|---|
+| Erase | 874 µs |
+| Wipe and read-back | 1 321 µs |
+| Bridge round trip | p50 6.19 ms, p95 7.20 ms, 1 000 calls, 0 errors |
+| 0G decision | 2.05 s median, p95 2.11 s |
+| Deadline | 5 000 ms |
+
+Settled payments on Hedera testnet. The mirror node reports `SUCCESS` for both.
+
+```
+0.0.11340251@1793997107.642204384
+0.0.11340251@1793997690.385465376
+```
+
+## Limits
+
+- Not a certified secure element. A bench attacker with SWD access can read the MCU.
+- The loop covers one path. Opening the enclosure by other means is out of scope.
+- World verification is implemented. The success scan is not done yet.
+- The board has no RTC. Its clock runs slow, so TLS goes through the laptop relay.
+- The desktop AppImage is not published yet.
+
+## Verify
+
+```bash
+.venv/bin/python tools/grade.py                  # 12 checks, 7 negative controls
+ASH_GRADE_HW=1 .venv/bin/python tools/grade.py   # adds a real wipe and re-arm
+.venv/bin/python tools/check_braces.py           # code blocks hold literal braces
+python -m pytest device -q                       # vault, seal service, providers
+```
+
+The grade reads the live site and API, recomputes the claimed numbers from `/evidence`, checks the
+transaction ids against the Hedera mirror node, and grades the seal/unseal policy against an oracle.

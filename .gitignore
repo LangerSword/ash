@@ -9,9 +9,16 @@ node_modules/
 # local track notes (not for the public repo yet)
 docs/tracks/
 
-# desktop app build output
+# build output
+site/dist/
+dist/
 app/node_modules/
 app/dist/
 app/src-tauri/target/
 app/src-tauri/bin/ash-service
-dist/
+
+# derived demo state; keep the fixture payload and the ledger
+demo/*.ash
+demo/*.out
+demo/*.bin
+!demo/C-001.bin
