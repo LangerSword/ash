@@ -6,5 +6,7 @@ export default defineConfig({
   plugins: [svelte()],
   clearScreen: false,
   server: { port: 5183, strictPort: true },
+  // Tauri serves the bundle from a custom protocol; relative asset paths are safest.
+  base: "./",
   build: { target: "chrome105", minify: "esbuild", sourcemap: false },
 });

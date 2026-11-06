@@ -192,30 +192,10 @@ h3 {
   height: 100%;
 }
 
-.hero-meta {
-  position: absolute;
-  left: var(--gutter);
-  bottom: 40px;
-  max-width: 430px;
-  display: grid;
-  gap: 18px;
-}
-
-.hero-meta p {
-  margin: 0;
-  font-family: var(--serif);
-  font-size: clamp(20px, 1.6vw, 24px);
-  line-height: 1.35;
-  color: var(--text);
-}
-
-.hero-meta em {
-  font-style: italic;
-  color: var(--muted);
-}
-
 .hero-link {
-  justify-self: start;
+  position: absolute;
+  right: var(--gutter);
+  bottom: 40px;
   font-family: var(--mono);
   font-size: 10.5px;
   letter-spacing: 0.18em;
@@ -332,15 +312,6 @@ h3 {
   .hero {
     height: 92dvh;
     min-height: 560px;
-  }
-  .hero-meta {
-    left: var(--gutter);
-    right: var(--gutter);
-    bottom: 30px;
-    max-width: none;
-  }
-  .hero-meta p {
-    font-size: 19px;
   }
   .vertical {
     display: none;

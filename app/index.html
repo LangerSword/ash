@@ -13,5 +13,28 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      // If the bundle never mounts, say so instead of showing a black window.
+      function ashBootError(msg) {
+        var el = document.getElementById("app");
+        if (!el || el.getAttribute("data-booted") === "1") return;
+        el.innerHTML =
+          '<div style="font:13px ui-monospace,Menlo,monospace;padding:32px;line-height:1.65">' +
+          '<div style="letter-spacing:.14em;color:#ff5c5c;margin-bottom:10px">ASH DID NOT START</div>' +
+          '<div style="color:#8a8a8a">' + (msg || "the UI bundle did not load") + "</div>" +
+          '<div style="color:#5f5f66;margin-top:10px">Details: ~/.local/state/ash/app.log</div>' +
+          "</div>";
+      }
+      window.addEventListener("error", function (e) {
+        ashBootError(e && e.message ? e.message : "script error");
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        ashBootError(String(e && e.reason ? e.reason : "unhandled rejection"));
+      });
+      setTimeout(function () {
+        var el = document.getElementById("app");
+        if (el && el.childElementCount === 0) ashBootError("the UI bundle did not mount within 5 s");
+      }, 5000);
+    </script>
   </body>
 </html>

@@ -17,7 +17,9 @@ echo "== service"
 bash scripts/build-service.sh
 
 echo "== rust"
-(cd app/src-tauri && cargo build --release)
+# cargo does not track app/dist, so force the asset re-embed on every build
+touch app/src-tauri/src/lib.rs
+(cd app/src-tauri && cargo build --release --features custom-protocol)
 
 echo "== AppDir"
 appdir="$root/dist/AppDir"

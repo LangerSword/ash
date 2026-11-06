@@ -20,7 +20,16 @@ app/
 ```
 
 The script builds the frontend, the Python sidecar, the Rust binary, assembles an AppDir and runs
-`appimagetool`. Requirements: Rust, Node, a `.venv` with `cryptography` (PyInstaller is installed on
+`appimagetool`.
+
+Two build traps this script handles, both of which produce a **blank window**:
+
+- the release binary must be compiled with `--features custom-protocol`, otherwise Tauri navigates to
+  `devUrl` (`localhost:5183`) instead of the embedded bundle and shows a connection error;
+- cargo does not track `app/dist`, so a frontend-only change does not re-embed the bundle. The script
+  touches `src-tauri/src/lib.rs` before building to force it.
+
+Requirements: Rust, Node, a `.venv` with `cryptography` (PyInstaller is installed on
 demand), `rsvg-convert`, `curl`, and a system `webkit2gtk-4.1` at runtime.
 
 Dev loop:

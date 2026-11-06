@@ -33,16 +33,9 @@
     <h1 class="sr-only">Ash, a seal that destroys the data if you open it</h1>
     <div class="stage"><HeroBurn /></div>
 
-    <div class="hero-meta">
-      <p>
-        <em>Ash</em> is a tamper-responsive seal for confidential shipments. Break the loop and the key
-        dies in the chip, before anyone reads a byte.
-      </p>
-      <a class="hero-link" href="#install">Install the app</a>
-    </div>
-
+    <a class="hero-link" href="#install">Install the app</a>
     <p class="vertical" aria-hidden="true">灰になる</p>
-    <p class="hero-caption mono">one burn, then ash</p>
+    <p class="hero-caption mono">burns and returns</p>
   </section>
 
   <TierScroll />
