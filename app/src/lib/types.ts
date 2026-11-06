@@ -26,7 +26,7 @@ export type DeviceSnapshot = {
 };
 
 export type ServiceInfo = {
-  mode: "attached" | "spawned" | "unavailable";
+  mode: "starting" | "attached" | "spawned" | "unavailable";
   base: string;
   detail: string;
   mock: boolean;

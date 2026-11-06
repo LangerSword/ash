@@ -155,11 +155,11 @@
     margin-bottom: 16px;
   }
   .matrix span {
-    background: var(--ink);
+    background: var(--text);
     opacity: 0.12;
   }
   .matrix span.on {
-    background: var(--ink);
+    background: var(--text);
     opacity: 0.88;
   }
   figcaption b {
@@ -208,7 +208,7 @@
     color: var(--dim);
   }
   .ev {
-    color: var(--ink);
+    color: var(--text);
   }
   .ev.hot {
     color: var(--ember);
@@ -235,7 +235,7 @@
     font-family: var(--mono);
     font-size: 11.5px;
     line-height: 1.7;
-    color: var(--ink);
+    color: var(--text);
   }
   @media (max-width: 900px) {
     .head,

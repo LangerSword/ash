@@ -17,7 +17,8 @@
 
   <p class="body">
     World proves a human is present when a container is <em>unsealed</em>. It is not needed to seal, to
-    read the ledger, or to break the loop. No credentials are stored in this app.
+    read the ledger, or to break the loop. The app stores no World credentials; the relying-party key
+    lives on the local service.
   </p>
 
   <dl class="rows">
@@ -45,8 +46,8 @@
   </p>
 
   <p class="body dim">
-    You will scan a QR with the World app at unseal time. Skipping this screen does not disable
-    unsealing; it only skips the explanation.
+    You will scan a QR with the World app at unseal time. Continuing does not enable or disable
+    unsealing; it only closes this explanation.
   </p>
 
   <div class="foot">

@@ -290,7 +290,7 @@
 <style>
   .console {
     display: grid;
-    grid-template-rows: 44px minmax(0, 1fr) minmax(190px, 34%);
+    grid-template-rows: 44px minmax(0, 1fr) minmax(190px, 38%);
     height: 100%;
     min-height: 0;
   }
@@ -538,7 +538,18 @@
   }
 
   @media (max-width: 860px) {
+    .console {
+      display: block;
+      height: 100%;
+      overflow-y: auto;
+    }
+
     header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      height: 44px;
+      background: var(--bg);
       grid-template-columns: 1fr auto;
     }
 
@@ -547,18 +558,13 @@
     }
 
     .mid {
-      grid-template-columns: 1fr;
-      overflow-y: auto;
+      display: block;
     }
 
     .mirror,
     .controls {
       overflow: visible;
-    }
-
-    .mirror {
-      border-right: 0;
-      border-bottom: 1px solid var(--border);
+      min-height: auto;
     }
   }
 </style>

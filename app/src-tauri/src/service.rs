@@ -19,9 +19,9 @@ pub struct ServiceInfo {
 impl Default for ServiceInfo {
     fn default() -> Self {
         Self {
-            mode: "unavailable".into(),
+            mode: "starting".into(),
             base: String::new(),
-            detail: "not started".into(),
+            detail: "starting the local service".into(),
             mock: false,
         }
     }
@@ -172,6 +172,18 @@ pub fn ensure(board_port: u16, serial: &str, exe_dir: &Path) -> (ServiceInfo, Op
     }
     if let Some(f) = stderr {
         cmd.stderr(f);
+    }
+
+    // The service must not outlive the window that started it.
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            cmd.pre_exec(|| {
+                libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM);
+                Ok(())
+            });
+        }
     }
 
     match cmd.spawn() {

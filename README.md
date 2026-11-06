@@ -94,13 +94,30 @@ cd site && npm install && npm run dev   # site on :5173
 `site/public/config.json` holds the API base used by the hosted build. If the tunnel changes, update
 that file and push; Actions redeploys.
 
+## The desktop app
+
+`app/` is the product: a Tauri v2 shell (Rust) with a Svelte 5 UI. It detects the board over adb,
+seals and unseals payloads, mirrors the 13×8 matrix, shows the hash-chained ledger, and ships as one
+AppImage.
+
+```bash
+./scripts/build-appimage.sh          # -> dist/Ash-0.1.0-x86_64.AppImage
+```
+
+It attaches to a running `device/demo_api.py` on :8080, or spawns its own bundled copy on a free port.
+`app/README.md` documents the split between the Rust device link, the Python service and the UI, and
+the endpoints added for it (`POST /frame`, `GET /ledger/verify`, `evidence.mock|world`).
+
 ## Layout
 
 ```
-firmware/ash_mcu/   STM32 sketch (state machine, flash, sensing)
+firmware/ash_mcu/   STM32 sketch (state machine, flash, sensing, host frames)
+firmware/ash_app/   the board's Python bridge (server.py)
 device/             Python service (vault, 0G, World, Hedera)
+app/                Ash Desktop (Tauri + Svelte): the AppImage
 tools/              relay, time sync, test scripts
 docs/               ARCHITECTURE, SECURITY, AI_USE
+scripts/            build-service.sh, build-appimage.sh
 ```
 
 ## Setup

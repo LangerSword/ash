@@ -83,7 +83,7 @@
   .ledger {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    min-height: 0;
+    min-height: 200px;
     border-top: 1px solid var(--border);
   }
 
@@ -128,10 +128,17 @@
 
   table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
   }
+
+  th:nth-child(1) { width: 32%; }
+  th:nth-child(2) { width: 16%; }
+  th:nth-child(3) { width: 11%; }
+  th:nth-child(4) { width: 15%; }
+  th:nth-child(5) { width: 26%; }
 
   th {
     position: sticky;
@@ -142,12 +149,12 @@
     color: var(--dim);
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    padding: 6px 14px;
+    padding: 5px 14px;
     border-bottom: 1px solid var(--border);
   }
 
   td {
-    padding: 5px 14px;
+    padding: 4px 14px;
     border-bottom: 1px solid #16161a;
     white-space: nowrap;
     overflow: hidden;

@@ -58,7 +58,7 @@
 
   .card {
     width: min(560px, 100%);
-    max-height: 100%;
+    max-height: calc(100vh - 48px);
     overflow-y: auto;
     background: var(--surface);
     border: 1px solid var(--border-strong);
@@ -84,13 +84,13 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 14px;
+    gap: 10px;
   }
 
   li {
     display: grid;
-    grid-template-columns: 96px 1fr;
-    gap: 16px;
+    grid-template-columns: 76px 1fr;
+    gap: 14px;
     align-items: center;
   }
 

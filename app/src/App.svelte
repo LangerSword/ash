@@ -15,6 +15,7 @@
 
   onMount(async () => {
     reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ui.event("ui: boot");
     await ui.boot();
     const cfg = ui.runtime?.config;
     if (!cfg) {
@@ -24,6 +25,7 @@
     if (!cfg.intro_seen) step = "intro";
     else if (!cfg.legend_seen) step = "legend";
     else step = "console";
+    ui.event(`ui: step ${step} · service ${ui.runtime?.service.mode ?? "?"}`);
   });
 
   function afterIntro() {

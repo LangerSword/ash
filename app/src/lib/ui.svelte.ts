@@ -98,7 +98,7 @@ class Ui {
   async pull() {
     await this.pullRuntime();
     const svc = this.runtime?.service;
-    if (!svc || svc.mode === "unavailable" || !svc.base) {
+    if (!svc || svc.mode === "starting" || svc.mode === "unavailable" || !svc.base) {
       this.serviceOk = false;
       this.tick += 1;
       return;

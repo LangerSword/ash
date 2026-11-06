@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import gsap from "gsap";
-  import { api } from "../lib/api";
+  import { api, apiBase, ApiError } from "../lib/api";
   import { buildIntroFrames, INTRO_FPS } from "../lib/intro-frames";
 
   type Props = {
@@ -48,12 +48,33 @@
     finish();
   }
 
+  let cancelled = false;
+
   onMount(() => {
-    // Fire the same beats at the board. If the endpoint is missing, say so once.
-    api
-      .frame(buildIntroFrames(), INTRO_FPS)
-      .then((r) => onBoard(`board intro · ${r.frames} frames @ ${r.fps} fps`))
-      .catch(() => onBoard("Board intro unavailable (no /frame); shown in-app only."));
+    // Fire the same beats at the board. Wait for the local service if it is still booting.
+    const started = performance.now();
+    const post = () => {
+      if (cancelled) return;
+      if (!apiBase()) {
+        if (performance.now() - started > 2400) {
+          onBoard("Board intro skipped: the local service was still starting.");
+          return;
+        }
+        window.setTimeout(post, 250);
+        return;
+      }
+      api
+        .frame(buildIntroFrames(), INTRO_FPS)
+        .then((r) => onBoard(`board intro · ${r.frames} frames @ ${r.fps} fps`))
+        .catch((e) => {
+          if (e instanceof ApiError && e.status === 404) {
+            onBoard("Board intro unavailable (no /frame on this firmware); shown in-app only.");
+          } else {
+            onBoard(`Board intro not sent: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        });
+    };
+    post();
 
     if (reduced) {
       gsap.set([boxPath, lid], { opacity: 0 });
@@ -101,6 +122,7 @@
     };
     window.addEventListener("keydown", keys);
     return () => {
+      cancelled = true;
       window.removeEventListener("keydown", keys);
       if (tl) tl.kill();
     };

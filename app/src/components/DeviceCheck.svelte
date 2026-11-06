@@ -53,12 +53,14 @@
     <div class="row">
       <dt>Local service</dt>
       <dd>
-        <span data-ok={service?.mode !== "unavailable" ? 1 : 0}>
+        <span data-ok={service?.mode === "attached" || service?.mode === "spawned" ? 1 : 0}>
           {service?.mode === "attached"
             ? `attached · ${service.base}`
             : service?.mode === "spawned"
               ? `spawned · ${service.base}`
-              : "unavailable"}
+              : service?.mode === "starting"
+                ? "starting…"
+                : "unavailable"}
         </span>
       </dd>
     </div>

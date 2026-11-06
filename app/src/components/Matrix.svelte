@@ -92,6 +92,7 @@
     grid-template-columns: repeat(13, 1fr);
     gap: 2px;
     width: 100%;
+    max-width: 340px;
     aspect-ratio: 13 / 8;
     padding: 6px;
     border: 1px solid var(--border);
