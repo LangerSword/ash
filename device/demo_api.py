@@ -237,6 +237,23 @@ class Handler(BaseHTTPRequestHandler):
                 "bridge_p50_ms": 6.19, "bridge_p95_ms": 7.20,
                 "tier1_p50_s": 2.05, "tier1_cost_usd_micro": 38, "deadline_ms": 5000,
             })
+        if self.path.startswith("/world/qr"):
+            from urllib.parse import urlparse, parse_qs
+            q = parse_qs(urlparse(self.path).query)
+            data = (q.get("data") or [""])[0]
+            import urllib.request
+            try:
+                with urllib.request.urlopen("http://127.0.0.1:7070/api/qr?data=" + urllib.parse.quote(data), timeout=8) as r:
+                    svg = r.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/svg+xml")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Length", str(len(svg)))
+                self.end_headers()
+                self.wfile.write(svg)
+                return
+            except Exception as e:
+                return self._send(502, {"ok": False, "error": str(e)})
         if self.path.startswith("/world/config"):
             return self._proxy_get("http://127.0.0.1:7070/api/config")
         if self.path.startswith("/wallet/nonce"):

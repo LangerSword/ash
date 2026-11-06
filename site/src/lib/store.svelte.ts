@@ -132,7 +132,7 @@ export function unsealWithProof(container: string, proof: unknown) {
   return action(
     "unseal",
     async () => {
-      const r = await api.unseal(container, JSON.stringify(proof));
+      const r = await api.unseal(container, proof as Record<string, unknown>);
       logLine(`payload: ${r.payload.trim().slice(0, 80)}`, "dim");
     },
     `unseal ${container} (world proof)`,

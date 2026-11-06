@@ -114,7 +114,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ container, owner }),
     }),
-  unseal: (container: string, proof: string) =>
+  unseal: (container: string, proof: string | Record<string, unknown>) =>
     req<{ ok: boolean; payload: string; record: LedgerRecord }>(
       "/unseal",
       { method: "POST", body: JSON.stringify({ container, proof }) },

@@ -1,6 +1,7 @@
 <script lang="ts">
   import MatrixMirror from "./MatrixMirror.svelte";
   import Ledger from "./Ledger.svelte";
+  import { api, apiBase } from "../lib/api";
   import {
     breakLoop,
     closeLoop,
@@ -10,7 +11,61 @@
     stateLabel,
     ui,
     unsealTest,
+    unsealWithProof,
   } from "../lib/store.svelte";
+
+  let world = $state<{ phase: "idle" | "starting" | "scan" | "verifying" | "done" | "error"; qr: string; msg: string }>({
+    phase: "idle",
+    qr: "",
+    msg: "",
+  });
+
+  async function unsealWorld() {
+    if (world.phase === "starting" || world.phase === "scan" || world.phase === "verifying") return;
+    world = { phase: "starting", qr: "", msg: "" };
+    try {
+      const cfg = await api.worldConfig();
+      if (!cfg.has_key) throw new Error("World signing key not configured");
+      const sig = (await fetch(apiBase() + "/world/rp-signature", { method: "POST" }).then((r) =>
+        r.json(),
+      )) as { sig: string; nonce: string; created_at: number; expires_at: number };
+      const idkit = (window as unknown as {
+        IDKit?: {
+          request: (a: unknown) => { preset: (c: unknown) => Promise<unknown> };
+          proofOfHuman: () => unknown;
+        };
+      }).IDKit;
+      if (!idkit) throw new Error("IDKit bundle not loaded");
+      const builder = idkit.request({
+        app_id: cfg.app_id,
+        action: cfg.action,
+        rp_context: {
+          rp_id: cfg.rp_id,
+          nonce: sig.nonce,
+          created_at: sig.created_at,
+          expires_at: sig.expires_at,
+          signature: sig.sig,
+        },
+        allow_legacy_proofs: true,
+        environment: "production",
+      });
+      const request = (await builder.preset(idkit.proofOfHuman())) as {
+        connectorURI: string;
+        pollUntilCompletion: () => Promise<unknown>;
+      };
+      world = {
+        phase: "scan",
+        qr: apiBase() + "/world/qr?data=" + encodeURIComponent(request.connectorURI),
+        msg: "Scan with World ID to approve the unseal.",
+      };
+      const proof = await request.pollUntilCompletion();
+      world = { ...world, phase: "verifying", msg: "Proof received. Verifying server-side…" };
+      await unsealWithProof("C-001", proof);
+      world = { phase: "done", qr: "", msg: "Unsealed with a World proof." };
+    } catch (e) {
+      world = { phase: "error", qr: "", msg: (e as Error).message || "World flow failed" };
+    }
+  }
 
   const deviceReady = $derived(ui.device?.state === "ready");
   const lock = $derived(!deviceReady || ui.busy !== "");
@@ -58,9 +113,9 @@
           onclick={() => seal("C-001")}>Seal container</button>
         <button class="btn" disabled={lock} data-busy={ui.busy === "unseal" ? 1 : 0}
           onclick={() => unsealTest("C-001")}>Unseal (test proof)</button>
-        <button class="btn" disabled={true} title="Needs a valid World RP signing key">
-          Unseal with World ID
-        </button>
+        <button class="btn" disabled={lock || world.phase === "starting" || world.phase === "scan"}
+          data-busy={world.phase === "scan" || world.phase === "verifying" ? 1 : 0}
+          onclick={() => unsealWorld()}>Unseal with World ID</button>
         <button class="btn" disabled={lock || ui.status?.state === 3}
           data-busy={ui.busy === "flex" ? 1 : 0} onclick={() => flexLoop()}>Flex loop (Tier 1)</button>
         <button class="btn" data-kind="danger" disabled={lock || ui.status?.state === 3}
@@ -72,6 +127,15 @@
       </div>
 
       <div class="hint" aria-live="polite">{hint}</div>
+
+      {#if world.qr || world.msg}
+        <div class="qr-box">
+          {#if world.qr}
+            <img src={world.qr} alt="World ID QR code" width="180" height="180" />
+          {/if}
+          <div class="qr-msg" data-phase={world.phase}>{world.msg}</div>
+        </div>
+      {/if}
 
       <dl class="state-list">
         <dt>state</dt><dd>{stateLabel()}</dd>

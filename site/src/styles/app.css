@@ -687,3 +687,38 @@ td.event[data-event="UNSEAL_DENIED"] {
     transition-duration: 0.001ms !important;
   }
 }
+
+
+.qr-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.qr-box img {
+  width: 180px;
+  height: 180px;
+  background: #fff;
+  padding: 6px;
+  border-radius: 2px;
+  image-rendering: pixelated;
+}
+
+.qr-msg {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 32ch;
+}
+
+.qr-msg[data-phase="error"] {
+  color: var(--alert);
+}
+
+.qr-msg[data-phase="done"] {
+  color: var(--signal);
+}
