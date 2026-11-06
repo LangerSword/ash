@@ -1,7 +1,7 @@
 # Ash, 3-minute demo script
 
 **Setup:** board on the table, USB to the laptop, `cloudflared` tunnel running, API on :8080,
-site open at https://langersword.github.io/ash/ with the chip reading `ARMED`.
+site open at https://ash.langersword.in/ with the chip reading `ARMED`.
 
 | time | action | say |
 |---|---|---|

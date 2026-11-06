@@ -57,6 +57,11 @@
       const builder = idkit.request({
         app_id: cfg.app_id,
         action: cfg.action,
+        // World derives the nullifier from action + signal. Without a signal every
+        // scan of the same action reuses one nullifier and World answers
+        // `nullifier_replayed` on the second attempt. The RP nonce is unique per
+        // request and server-issued, so a rescan is always a fresh proof.
+        signal: sig.nonce,
         rp_context: {
           rp_id: cfg.rp_id,
           nonce: sig.nonce,

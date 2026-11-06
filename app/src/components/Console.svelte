@@ -95,7 +95,7 @@
   <header>
     <div class="brand">
       <span class="wordmark">ASH</span>
-      <span class="meta">{ui.runtime?.version ?? "0.1.0"} · {ui.runtime?.service.mode ?? "…"}</span>
+      <span class="meta">tamper-responsive seal</span>
     </div>
 
     <div class="device">
@@ -119,19 +119,21 @@
     <section class="mirror">
       <Matrix mode={mode} {amberSince} deadlineMs={deadline} />
       <dl class="kv">
-        <dt>state</dt>
-        <dd>{chip} · counter {ui.status?.counter ?? "—"}</dd>
-        <dt>master</dt>
-        <dd>{ui.status ? (ui.status.master ? "present" : "erased") : "—"}</dd>
+        <dt>seal</dt>
+        <dd>{chip}</dd>
+        <dt>key</dt>
+        <dd>{ui.status ? (ui.status.master ? "in the chip" : "destroyed") : "—"}</dd>
         <dt>loop</dt>
         <dd>{ui.status ? (ui.status.loop ? "open" : "closed") : "—"}</dd>
+        <dt>opens</dt>
+        <dd>{ui.status?.counter ?? "—"}</dd>
         <dt>deadline</dt>
         <dd>{deadline} ms</dd>
-        <dt>last 0G</dt>
+        <dt>last decision</dt>
         <dd title={last0g?.id ?? ""}>
-          {last0g ? `${last0g.id.slice(0, 18)}… · ${last0g.latency || "?"} ms` : "—"}
+          {last0g ? `${last0g.id.slice(0, 14)}… · 0G` : "—"}
         </dd>
-        <dt>last hash</dt>
+        <dt>last record</dt>
         <dd class="hash" title={ui.ledger.at(-1)?.hash ?? ""}>{ui.lastHash}</dd>
       </dl>
 
@@ -144,8 +146,8 @@
     <section class="controls">
       <div class="group">
         <div class="group-head">
-          <span class="label">Seal</span>
-          <span class="note">key derived on the MCU, payload encrypted here</span>
+          <span class="label">Seal a case</span>
+          <span class="note">key derived in the chip, payload encrypted here</span>
         </div>
         <div class="row">
           <input
@@ -170,8 +172,8 @@
 
       <div class="group">
         <div class="group-head">
-          <span class="label">Unseal</span>
-          <span class="note">World proof, then a 0G release decision</span>
+          <span class="label">Open it</span>
+          <span class="note">a human, then a 0G release decision</span>
         </div>
         <div class="row">
           <button
@@ -188,8 +190,8 @@
 
       <div class="group">
         <div class="group-head">
-          <span class="label">Fault injection</span>
-          <span class="note">the rig on the desk, not a simulation</span>
+          <span class="label">What can happen to it</span>
+          <span class="note">on the real board, in front of you</span>
         </div>
         <div class="row">
           <button
@@ -198,7 +200,8 @@
             data-busy={ui.busy === "flex" ? 1 : 0}
             onclick={() => ui.flex()}
           >
-            Flex loop · Tier 1
+            Someone handled it
+            <span class="tier">Tier 1</span>
           </button>
           <button
             class="btn"
@@ -207,7 +210,8 @@
             data-busy={ui.busy === "cut" ? 1 : 0}
             onclick={cut}
           >
-            {confirmCut ? "Confirm · wipe the key" : "Break loop · Tier 0"}
+            {confirmCut ? "Confirm · the key dies" : "Someone cut the loop"}
+            <span class="tier">Tier 0</span>
           </button>
           <button
             class="btn"
@@ -215,7 +219,7 @@
             data-busy={ui.busy === "reprovision" ? 1 : 0}
             onclick={() => ui.reprovision()}
           >
-            Reprovision
+            Reset the seal
           </button>
         </div>
       </div>
@@ -234,14 +238,14 @@
         <div class="msg" data-kind="idle">
           <p>
             {ui.ready
-              ? "Ready. The key lives in the chip; the ledger is hash-chained."
+              ? "The key lives in the chip. Cut the loop and it is gone in a millisecond."
               : "Controls unlock when the board answers."}
           </p>
         </div>
       {/if}
 
       <div class="log">
-        <span class="label">Event log</span>
+        <span class="label">Activity</span>
         <pre class="scroll">{#each ui.lines.slice(-7) as line}<span class="t">{new Date(line.at).toLocaleTimeString([], { hour12: false })}</span> {line.text}
 {/each}{#if ui.lines.length === 0}<span class="t">--:--:--</span> waiting
 {/if}</pre>
@@ -426,6 +430,16 @@
   .note {
     font-size: 10px;
     color: var(--dim);
+  }
+
+  .tier {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 1px 5px;
   }
 
   .row {

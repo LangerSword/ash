@@ -17,7 +17,7 @@ can read it for a cent over x402 on Hedera.
 **Tracks:** 0G Physical AI · World (Best Use of IDKit) · Hedera (AI Agents That Pay: x402)
 
 **Repo:** https://github.com/LangerSword/ash
-**Live:** https://langersword.github.io/ash/ (API: https://api.langersword.in)
+**Live:** https://ash.langersword.in/ (API: https://api.langersword.in)
 
 **What is real / what is not:** real MCU wipe and key derivation, real 0G Router decisions with
 request ids, real World IDKit request flow; sandbox World identity, dev-mode loop simulation, and
