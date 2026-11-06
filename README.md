@@ -7,7 +7,11 @@ decides hold or wipe against a hard deadline — and no answer means wipe. Autho
 World authentication and a 0G release decision. An agent pays $0.01 in USDC over x402 on Hedera to
 read the history and refuse the delivery.
 
-**Status:** Tier 0 works on hardware (see below). Build in progress, ETHGlobal Mumbai, 6–7 Nov 2026.
+**Status:** live on hardware, hosted, ETHGlobal Mumbai 2026.
+
+- Site: https://langersword.github.io/ash/ (Svelte 5 + GSAP, deployed by GitHub Actions)
+- API + same site from one origin: the tunnel URL in `site/public/config.json`
+- Run locally: `python3 device/demo_api.py` and `cd site && npm run dev`
 
 ## Why
 
@@ -74,6 +78,20 @@ timeout     wipe at the deadline -> state 3, counter 1, master 0   (fail-closed)
 Note: the app container cannot do TLS on this platform (WRONG_VERSION_NUMBER on every HTTPS
 origin), so decisions go container -> host forwarder :9001 -> USB -> laptop relay -> 0G.
 Board-direct TLS is flaky on venue WiFi. The laptop relay is the documented egress.
+
+## The site
+
+Svelte 5 + Vite + GSAP, dark instrument panel, no framework beyond that. It polls `/device` and
+`/status`, mirrors the board's 13×8 matrix, and drives seal / unseal / cut / reprovision through the
+API. With no board attached it says `DEVICE OFFLINE` and disables the controls.
+
+```bash
+python3 device/demo_api.py          # API on :8080, talks to the board over adb
+cd site && npm install && npm run dev   # site on :5173
+```
+
+`site/public/config.json` holds the API base used by the hosted build. If the tunnel changes, update
+that file and push; Actions redeploys.
 
 ## Layout
 
