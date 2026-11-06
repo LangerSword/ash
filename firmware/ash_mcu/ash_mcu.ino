@@ -302,6 +302,9 @@ String reprovision_impl() {
   flash_erase(g_flash, MASTER_OFF, 8192);
   flash_erase(g_flash, COUNTER_OFF, 8192);
   g_counter = 0; g_master_ok = false; g_state = ST_ARMED;
+#if ASH_DEV
+  g_sim = true; g_sim_closed = true;   // close the simulated loop before re-arming
+#endif
   provision_master();
   g_master_ok = true;
   set_anim(AN_ARMED);
