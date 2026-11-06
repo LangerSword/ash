@@ -31,6 +31,10 @@
 <main id="top">
   <section class="hero">
     <h1 class="sr-only">Ash, a seal that destroys the data if you open it</h1>
+    <p class="sr-only lede">
+      A tamper-responsive seal for confidential shipments. Break the loop and the key dies in the chip,
+      before anyone reads a byte.
+    </p>
     <div class="stage"><HeroBurn /></div>
 
     <a class="hero-link" href="#install">Install the app</a>
