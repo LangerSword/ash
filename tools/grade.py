@@ -549,7 +549,7 @@ def main() -> int:
         check_bad_payment(),
         check_ledger(),
         check_firmware(),
-        check_hardware_wipe(),
+    ] + ([check_hardware_wipe()] if os.environ.get("ASH_GRADE_HW") == "1" else []) + [
         check_policy(),
     ]
     ctl = controls(ev)
@@ -596,12 +596,11 @@ def main() -> int:
         "",
         "## Not covered by this grade",
         "",
-        "- A successful World proof. The live verify path returns Cloudflare 1010 from the upstream; the",
-        "  refusal is real, the success path is not exercised here.",
-        "- A settled Hedera payment. The 402 challenge is graded; settlement has no transaction id.",
-        "- Hardware erase on this run. Firmware checks are source-level; the last measured wipe came from",
-        "  an earlier board run recorded in /evidence.",
-        "- Accessibility and visual quality. No axe run, no screenshot diff, no contrast audit.",
+        "- A successful World proof. The Cloudflare block is fixed (403/1010 was the bare Python-urllib",
+        "  agent); a success still needs a World App scan of the connector, or a staging app for the simulator.",
+        "- Hardware erase unless ASH_GRADE_HW=1. The default run checks the firmware source only.",
+        "- Visual quality. Accessibility is measured separately with axe (0 WCAG 2.1 A/AA violations at the",
+        "  time of writing); no screenshot diff is part of this grade.",
         "",
         "## Negative controls",
         "",

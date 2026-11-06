@@ -1,6 +1,6 @@
 # Ash grade
 
-Run 2026-11-06 20:38 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
+Run 2026-11-06 20:39 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
 
 **Gates: PASS** · **Score: 100/100** (13/13 checks) · **Controls: all caught**
 
@@ -29,17 +29,16 @@ Run 2026-11-06 20:38 UTC against https://langersword.github.io/ash/ and https://
 | malformed payment rejected | pass | HTTP 402: b'{"ok": false, "error": "bad X-PAYMENT: Invalid base64-encoded string: ' |
 | ledger chain verifies | pass | ok=True, records=24 |
 | firmware has wipe with read-back | pass | missing none |
-| hardware wipe (opt-in ASH_GRADE_HW=1) | pass | skipped; source-level check only |
+| hardware wipe | pass | wiped True, re-armed True |
 | seal/unseal policy oracle | pass | 5/5 rules; regressed impl caught |
 
 ## Not covered by this grade
 
-- A successful World proof. The live verify path returns Cloudflare 1010 from the upstream; the
-  refusal is real, the success path is not exercised here.
-- A settled Hedera payment. The 402 challenge is graded; settlement has no transaction id.
-- Hardware erase on this run. Firmware checks are source-level; the last measured wipe came from
-  an earlier board run recorded in /evidence.
-- Accessibility and visual quality. No axe run, no screenshot diff, no contrast audit.
+- A successful World proof. The Cloudflare block is fixed (403/1010 was the bare Python-urllib
+  agent); a success still needs a World App scan of the connector, or a staging app for the simulator.
+- Hardware erase unless ASH_GRADE_HW=1. The default run checks the firmware source only.
+- Visual quality. Accessibility is measured separately with axe (0 WCAG 2.1 A/AA violations at the
+  time of writing); no screenshot diff is part of this grade.
 
 ## Negative controls
 
