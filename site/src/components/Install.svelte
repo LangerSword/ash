@@ -56,8 +56,8 @@
 npm run tauri build -- --bundles appimage</code></pre>
         <p class="note">
           Specification:
-          <a href="https://github.com/LangerSword/ash/blob/master/desktop-app-brief.md" rel="noopener"
-            >desktop-app-brief.md</a
+          <a href="https://github.com/LangerSword/ash/blob/master/docs/DESKTOP_APP.md" rel="noopener"
+            >docs/DESKTOP_APP.md</a
           >
         </p>
       </div>

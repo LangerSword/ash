@@ -1,6 +1,6 @@
 # Ash site
 
-Frontend lives here. Read [`../website-brief-v2.md`](../website-brief-v2.md) first — it is the
+Frontend lives here. Read [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) and the root README first. They are the
 contract (structure, copy, design tokens, GSAP choreography, API shapes, wallet flows, acceptance).
 
 Stack: Svelte 5 + Vite + TypeScript, GSAP + ScrollTrigger, plain CSS tokens.
