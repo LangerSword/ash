@@ -45,7 +45,14 @@
   </footer>
 </main>
 <script>
-  const api = window.ASH_API || "";
+  let cfgApi = "";
+  async function loadConfig() {
+    try {
+      const c = await fetch("./config.json", { cache: "no-store" });
+      cfgApi = (await c.json()).apiBase || "";
+    } catch { cfgApi = ""; }
+  }
+  let api = window.ASH_API || "";
   const el = document.getElementById("status");
   async function tick() {
     if (!api) { el.dataset.state = "OFFLINE"; el.textContent = "OFFLINE"; return; }
@@ -56,7 +63,11 @@
       el.dataset.state = s; el.textContent = s;
     } catch { el.dataset.state = "OFFLINE"; el.textContent = "OFFLINE"; }
   }
-  setInterval(tick, 3000); tick();
+  (async () => {
+    await loadConfig();
+    if (!api) api = cfgApi;
+    tick(); setInterval(tick, 3000);
+  })();
 </script>
 </body>
 </html>
