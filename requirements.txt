@@ -1,0 +1,2 @@
+cryptography>=42
+eth-account>=0.11

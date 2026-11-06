@@ -8,3 +8,4 @@ node_modules/
 
 # local track notes (not for the public repo yet)
 docs/tracks/
+app/
