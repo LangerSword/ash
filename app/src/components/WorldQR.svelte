@@ -155,14 +155,30 @@
           <div class="seal-mark" aria-hidden="true">
             <svg viewBox="0 0 120 120"><path d="M30 62 L52 84 L92 38" fill="none" stroke="#5ad46a" stroke-width="2" /></svg>
           </div>
+        {:else if phase === "error"}
+          <div class="seal-mark" data-kind="err" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <path d="M38 38 L82 82 M82 38 L38 82" fill="none" stroke="#ff5c5c" stroke-width="2" />
+            </svg>
+          </div>
         {:else if qr}
           <img src={qr} alt="World ID QR code" width="288" height="288" data-dim={phase === "verifying" ? 1 : 0} />
         {:else}
           <div class="qr-skeleton"><span class="pulse" data-kind="red"></span></div>
         {/if}
         <div class="qr-caption">
-          <strong>{message || "Preparing the request…"}</strong>
-          <span>{phase === "done" ? "the payload key was released" : "point the World app at this code"}</span>
+          <strong>
+            {phase === "error"
+              ? "Nothing was released"
+              : message || "Preparing the request…"}
+          </strong>
+          <span>
+            {phase === "done"
+              ? "the payload key was released"
+              : phase === "error"
+                ? "the proof was rejected; the key stayed in the chip"
+                : "point the World app at this code"}
+          </span>
         </div>
       </div>
 
@@ -331,6 +347,11 @@
   .seal-mark svg {
     width: 132px;
     height: 132px;
+  }
+
+  .seal-mark[data-kind="err"] {
+    border-color: #4a2626;
+    background: #120a0a;
   }
 
   .qr-caption {

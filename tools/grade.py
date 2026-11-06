@@ -481,7 +481,7 @@ def check_policy() -> Result:
 def controls(ev: dict) -> list[tuple[str, str]]:
     out = []
     text = bundle_text()
-    r = check_claim_parity(ev, text.replace(str(ev.get("erase_us", 874)), "241", 1))
+    r = check_claim_parity(ev, text.replace(str(ev.get("erase_us", 874)), "241"))
     out.append(("claim drift 874→241", "caught" if not r.ok else "MISSED"))
 
     fake = routes_from_api() | {"/totally-fake"}

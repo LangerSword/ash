@@ -48,10 +48,45 @@ class WorldIdKit:
             raise WorldError("proof is empty")
         if result.get("success") is False:
             raise WorldError(f"proof not completed: {result.get('error') or 'unknown'}")
+
+        # IDKit's pollUntilCompletion resolves with a {success, result} envelope, and
+        # the connector payload can sit another level down. World wants the payload
+        # itself; forwarding the envelope is what produced
+        # `{"detail":"responses array is required"}` during a real scan.
+        for key in ("result", "payload", "proof"):
+            inner = result.get(key)
+            if isinstance(inner, dict) and "responses" in inner and "responses" not in result:
+                result = inner
+                break
+
         url = f"{self.base}/api/v4/verify/{self.rp_id}"
         outgoing = dict(result)
         if self.action and not outgoing.get("action"):
             outgoing["action"] = self.action
+
+        # Record what we are about to send. When World refuses, this file is the only
+        # evidence of the shape it refused.
+        try:
+            import pathlib
+            import time as _t
+
+            d = pathlib.Path.home() / ".local/state/ash"
+            d.mkdir(parents=True, exist_ok=True)
+            with (d / "world.log").open("a") as fh:
+                fh.write(json.dumps({
+                    "at": int(_t.time()),
+                    "keys": sorted(outgoing.keys()),
+                    "responses": len(outgoing.get("responses") or []),
+                    "first_response_keys": sorted((outgoing.get("responses") or [{}])[0].keys())[:12],
+                    "protocol_version": outgoing.get("protocol_version"),
+                }) + "\n")
+        except Exception:
+            pass
+
+        if "responses" not in outgoing:
+            raise WorldError(
+                "proof has no responses array; keys=" + ",".join(sorted(outgoing.keys()))
+            )
         body = json.dumps(outgoing).encode()
         req = urllib.request.Request(
             url, data=body,
