@@ -15,8 +15,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
@@ -64,13 +64,13 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 32px;
-  padding: 0 12px;
+  height: 36px;
+  padding: 0 14px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   color: var(--text);
-  font-size: 12px;
+  font-size: 12.5px;
   letter-spacing: 0.02em;
   cursor: pointer;
   transition:
@@ -131,7 +131,7 @@ a:hover {
 }
 
 .field {
-  height: 32px;
+  height: 36px;
   width: 100%;
   padding: 0 10px;
   background: var(--bg);
@@ -156,8 +156,8 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 22px;
-  padding: 0 9px;
+  height: 24px;
+  padding: 0 10px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   font-size: 11px;

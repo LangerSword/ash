@@ -391,7 +391,7 @@ h3 {
 /* ---- scroll entry for the interior sections ---- */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    #app,
+    #screens,
     #evidence,
     #use,
     #docs,

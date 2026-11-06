@@ -1,6 +1,6 @@
 # Ash grade
 
-Run 2026-11-06 20:06 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
+Run 2026-11-06 20:28 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
 
 **Gates: PASS** · **Score: 100/100** (11/11 checks) · **Controls: all caught**
 
@@ -10,7 +10,7 @@ Run 2026-11-06 20:06 UTC against https://langersword.github.io/ash/ and https://
 |---|---|---|
 | site reachable | PASS | HTTP 200, 1572 B |
 | api status | PASS | HTTP 200, keys ['amber', 'counter', 'loop', 'master', 'state'] |
-| unseal refuses empty proof | PASS | HTTP 403: b'{"ok": false, "error": "WorldError: verify HTTP 403: error code: 1010\\n"}' |
+| unseal refuses empty proof | PASS | HTTP 403: b'{"ok": false, "error": "WorldError: proof is not a JSON object"}' |
 | shipped assets match source | PASS | 3/3 identical |
 | no settlement/mainnet overclaims | PASS | banned hits: none |
 
@@ -26,7 +26,7 @@ Run 2026-11-06 20:06 UTC against https://langersword.github.io/ash/ and https://
 | site shows the live payee | pass | payee 0.0.11344783 found |
 | x402 challenge matches config | pass | payTo 0.0.11344783, amount 10000000 |
 | malformed payment rejected | pass | HTTP 402: b'{"ok": false, "error": "bad X-PAYMENT: Invalid base64-encoded string: ' |
-| ledger chain verifies | pass | ok=True, records=22 |
+| ledger chain verifies | pass | ok=True, records=23 |
 | firmware has wipe with read-back | pass | missing none |
 | seal/unseal policy oracle | pass | 5/5 rules; regressed impl caught |
 

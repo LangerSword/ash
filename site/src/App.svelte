@@ -15,7 +15,7 @@
   <div class="nav-right">
     <nav aria-label="Sections">
       <a href="#how">The seal</a>
-      <a href="#app">App</a>
+      <a href="#screens">App</a>
       <a href="#evidence">Evidence</a>
       <a href="#docs">Docs</a>
       <a href="#install">Install</a>

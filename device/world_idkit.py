@@ -22,23 +22,44 @@ class WorldError(Exception):
 
 
 class WorldIdKit:
-    def __init__(self, rp_id: str, base: str = DEFAULT_BASE, timeout: int = 20):
+    def __init__(self, rp_id: str, base: str = DEFAULT_BASE, timeout: int = 20,
+                 action: str = ""):
         if not rp_id:
             raise ValueError("rp_id is required")
         self.rp_id = rp_id
         self.base = base.rstrip("/")
         self.timeout = timeout
+        # v4 verify rejects a uniqueness proof with no action
+        # ("action is required for uniqueness proofs"); the IDKit result does not
+        # always carry it, so the relying party supplies its own.
+        self.action = action
 
-    def verify(self, result: dict) -> str:
+    def verify(self, result: dict | str) -> str:
         """Forward the IDKit result and return a stable human identifier.
 
         Raises WorldError on any non-2xx, malformed body, or missing nullifier.
         """
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except json.JSONDecodeError:
+                raise WorldError("proof is not a JSON object") from None
+        if not isinstance(result, dict) or not result:
+            raise WorldError("proof is empty")
         url = f"{self.base}/api/v4/verify/{self.rp_id}"
-        body = json.dumps(result).encode()
+        outgoing = dict(result)
+        if self.action and not outgoing.get("action"):
+            outgoing["action"] = self.action
+        body = json.dumps(outgoing).encode()
         req = urllib.request.Request(
             url, data=body,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                # Cloudflare fronts this endpoint and rejects the bare
+                # "Python-urllib/x" agent with 403/1010. Any ordinary agent passes.
+                "User-Agent": "ash-seal/1.0 (+https://github.com/LangerSword/ash)",
+            },
             method="POST",
         )
         try:

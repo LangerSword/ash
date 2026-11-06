@@ -92,7 +92,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--border);
   }
 
@@ -130,7 +130,7 @@
     width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
 
@@ -149,12 +149,12 @@
     color: var(--dim);
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    padding: 5px 14px;
+    padding: 7px 16px;
     border-bottom: 1px solid var(--border);
   }
 
   td {
-    padding: 4px 14px;
+    padding: 6px 16px;
     border-bottom: 1px solid #16161a;
     white-space: nowrap;
     overflow: hidden;

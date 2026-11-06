@@ -96,7 +96,7 @@ def make_world():
         return StaticWorld({"good": "human-001"})
     rp = os.environ.get("WORLD_RP_ID", "")
     if rp:
-        return WorldIdKit(rp)
+        return WorldIdKit(rp, action=os.environ.get("WORLD_ACTION", "unseal"))
     print("WARN: WORLD_RP_ID unset, using StaticWorld (proof 'good')", flush=True)
     return StaticWorld({"good": "human-001"})
 

@@ -76,7 +76,7 @@
   });
 </script>
 
-<section class="app" id="app">
+<section class="app" id="screens">
   <div class="head">
     <h2>The screens you actually use.</h2>
     <p>

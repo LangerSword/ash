@@ -24,7 +24,7 @@
       </p>
       <div class="cta">
         <a class="btn" href="https://github.com/LangerSword/ash" rel="noopener">Repository</a>
-        <a class="btn ghost" href="#app">See the app</a>
+        <a class="btn ghost" href="#screens">See the app</a>
       </div>
     </div>
 

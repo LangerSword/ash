@@ -275,7 +275,7 @@
 <style>
   .console {
     display: grid;
-    grid-template-rows: 44px minmax(0, 1fr) minmax(190px, 38%);
+    grid-template-rows: 52px minmax(0, 1fr) minmax(200px, 38%);
     height: 100%;
     min-height: 0;
   }
@@ -285,7 +285,7 @@
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 16px;
-    padding: 0 14px;
+    padding: 0 20px;
     border-bottom: 1px solid var(--border);
   }
 
@@ -296,7 +296,7 @@
   }
 
   .wordmark {
-    font-size: 14px;
+    font-size: 15px;
     letter-spacing: 0.34em;
     font-weight: 500;
   }
@@ -370,7 +370,7 @@
   }
 
   .mirror {
-    padding: 14px;
+    padding: 20px;
     display: grid;
     gap: 12px;
     align-content: start;
@@ -399,7 +399,7 @@
   }
 
   .controls {
-    padding: 14px;
+    padding: 20px;
     display: grid;
     gap: 12px;
     align-content: start;
@@ -514,7 +514,7 @@
       position: sticky;
       top: 0;
       z-index: 2;
-      height: 44px;
+      height: 52px;
       background: var(--bg);
       grid-template-columns: 1fr auto;
     }
