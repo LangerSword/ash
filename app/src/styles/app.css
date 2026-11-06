@@ -89,9 +89,9 @@ a:hover {
 }
 
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.7;
   cursor: not-allowed;
-  color: var(--dim);
+  color: var(--muted);
   border-color: var(--border);
   background: transparent;
 }

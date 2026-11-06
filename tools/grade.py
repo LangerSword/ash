@@ -167,8 +167,6 @@ def check_assets() -> Result:
 
 
 BANNED = [
-    r"payment settled",
-    r"has settled",
     r"settled on mainnet",
     r"verified on mainnet",
     r"production world id",
@@ -231,13 +229,45 @@ def check_autoplay() -> Result:
     return Result("hero plays without a click", raf and no_button and not stage_click, f"rAF {raf}, no button {no_button}")
 
 
+def check_chain_settlement(payee: str, text: str | None = None) -> Result:
+    """Any transaction id shown on the site must exist on the mirror node as SUCCESS."""
+    text = bundle_text() if text is None else text
+    ids = set(re.findall(r"0\.0\.\d+@\d+\.\d+", text))
+    if not ids:
+        return Result("claimed settlement exists on-chain", False, "no transaction id on the site")
+    ok, detail = True, []
+    for tx in ids:
+        account, ts = tx.split("@")
+        stamp = ts.replace(".", "-")
+        code, body = get(f"https://testnet.mirrornode.hedera.com/api/v1/transactions/{account}-{stamp}")
+        try:
+            t = json.loads(body)["transactions"][0]
+        except Exception:
+            ok = False
+            detail.append(f"{tx}: not found")
+            continue
+        paid = {x["account"]: x["amount"] for x in t["transfers"]}
+        good = t.get("result") == "SUCCESS" and paid.get(payee, 0) > 0
+        ok = ok and good
+        detail.append(f"{tx}: {t.get('result')}, payee +{paid.get(payee, 0)}")
+    return Result("claimed settlement exists on-chain", ok, "; ".join(detail))
+
+
 def check_payee_on_site(payee: str, text: str | None = None) -> Result:
     text = bundle_text() if text is None else text
     ok = bool(payee) and payee in text
     return Result("site shows the live payee", ok, f"payee {payee} {'found' if ok else 'NOT in bundle'}")
 
 
-def check_402(ev_payee: str, body: bytes | None = None) -> Result:
+def env_value(key: str) -> str:
+    for line in (ROOT / ".env").read_text().splitlines():
+        if line.startswith(key + "="):
+            return line.split("=", 1)[1].strip()
+    return ""
+
+
+def check_402(ev_payee: str, body: bytes | None = None, fee_payer: str | None = None) -> Result:
+    fee_payer = env_value("HEDERA_FEE_PAYER") if fee_payer is None else fee_payer
     if body is None:
         code, body = get(f"{API}/attestation/C-001")
     else:
@@ -252,7 +282,7 @@ def check_402(ev_payee: str, body: bytes | None = None) -> Result:
         and a.get("scheme") == "exact"
         and a.get("network") == "hedera:testnet"
         and a.get("payTo") == ev_payee
-        and a.get("extra", {}).get("feePayer") == "0.0.9185802"
+        and a.get("extra", {}).get("feePayer") == fee_payer
         and a.get("amount") == "10000000"
     )
     return Result("x402 challenge matches config", ok, f"payTo {a.get('payTo')}, amount {a.get('amount')}")
@@ -446,6 +476,10 @@ def controls(ev: dict) -> list[tuple[str, str]]:
         }
     ).encode()
     r = check_402("0.0.11340251", fake_402)
+    broken = text.replace("0.0.11340251@1793997107", "0.0.11340251@1793997108", 1)
+    r = check_chain_settlement("0.0.11344783", broken)
+    out.append(("transaction id that is not on-chain", "caught" if not r.ok else "MISSED"))
+
     r = check_payee_on_site("0.0.999999", text)
     out.append(("stale payee in the bundle", "caught" if not r.ok else "MISSED"))
     out.append(("402 with the wrong payee", "caught" if not r.ok else "MISSED"))
@@ -476,6 +510,7 @@ def main() -> int:
         check_motion(),
         check_autoplay(),
         check_payee_on_site(payee),
+        check_chain_settlement(payee),
         check_402(payee),
         check_bad_payment(),
         check_ledger(),

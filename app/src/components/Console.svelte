@@ -275,7 +275,7 @@
 <style>
   .console {
     display: grid;
-    grid-template-rows: 52px minmax(0, 1fr) minmax(200px, 38%);
+    grid-template-rows: 52px minmax(0, 1fr) minmax(320px, 44%);
     height: 100%;
     min-height: 0;
   }
@@ -362,7 +362,7 @@
 
   .mid {
     display: grid;
-    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
     gap: 0;
     border-bottom: 1px solid var(--border);
     min-height: 0;
@@ -485,9 +485,9 @@
 
   .log pre {
     margin: 0;
-    font-size: 10px;
-    line-height: 1.5;
-    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text);
     max-height: 84px;
     min-height: 42px;
     padding: 8px;
@@ -499,8 +499,24 @@
   }
 
   .log .t {
-    color: var(--dim);
-    margin-right: 5px;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+
+  /* a tiled window is shorter than the design size; degrade, don't clip */
+  @media (max-height: 760px) and (min-width: 861px) {
+    .console {
+      grid-template-rows: 48px minmax(0, 1fr) minmax(210px, 40%);
+    }
+
+    .mirror,
+    .controls {
+      padding: 14px;
+    }
+
+    .log pre {
+      max-height: 64px;
+    }
   }
 
   @media (max-width: 860px) {

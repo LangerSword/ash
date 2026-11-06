@@ -1,8 +1,8 @@
 # Ash grade
 
-Run 2026-11-06 20:28 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
+Run 2026-11-06 20:33 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
 
-**Gates: PASS** · **Score: 100/100** (11/11 checks) · **Controls: all caught**
+**Gates: PASS** · **Score: 100/100** (12/12 checks) · **Controls: all caught**
 
 ## Gates (pass/fail, not scored)
 
@@ -24,6 +24,7 @@ Run 2026-11-06 20:28 UTC against https://langersword.github.io/ash/ and https://
 | reduced-motion guard on motion | pass | guard True, section-rise True |
 | hero plays without a click | pass | rAF True, no button True |
 | site shows the live payee | pass | payee 0.0.11344783 found |
+| claimed settlement exists on-chain | pass | 0.0.11340251@1793997107.642204384: SUCCESS, payee +10000000 |
 | x402 challenge matches config | pass | payTo 0.0.11344783, amount 10000000 |
 | malformed payment rejected | pass | HTTP 402: b'{"ok": false, "error": "bad X-PAYMENT: Invalid base64-encoded string: ' |
 | ledger chain verifies | pass | ok=True, records=23 |
@@ -47,5 +48,6 @@ Run 2026-11-06 20:28 UTC against https://langersword.github.io/ash/ and https://
 | fake endpoint in docs | caught |
 | anchor to a missing id | caught |
 | reduced-motion guard removed | caught |
+| transaction id that is not on-chain | caught |
 | stale payee in the bundle | caught |
 | 402 with the wrong payee | caught |

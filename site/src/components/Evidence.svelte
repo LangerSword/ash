@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   const glyphs = [
     {
       label: "ARMED",
@@ -31,9 +32,21 @@
     "amount": "10000000",
     "asset": "0.0.0",
     "payTo": "0.0.11344783",
-    "extra": { "feePayer": "0.0.9185802" }
+    "extra": { "feePayer": "0.0.11340251" }
   }]
 }`;
+  let challengeText = $state(challenge);
+
+  onMount(async () => {
+    try {
+      const r = await fetch("https://api.langersword.in/attestation/C-001");
+      const b = await r.json();
+      if (b && b.accepts) challengeText = JSON.stringify(b, null, 2);
+    } catch {
+      /* keep the recorded challenge */
+    }
+  });
+
   const events = [
     { t: "09:12:04", e: "SEALED", d: "container C-001, key derived on the MCU" },
     { t: "09:14:31", e: "AMBER", d: "edges 2, open 180 ms, deadline 5 000 ms" },
@@ -96,10 +109,19 @@
         <span class="mono">GET /attestation/C-001</span>
         <span class="mono">402</span>
       </div>
-      <pre><code>{challenge}</code></pre>
+      <pre><code>{challengeText}</code></pre>
+      <p class="settle">
+        <span class="mono">settled</span>
+        <a
+          href="https://hashscan.io/testnet/transaction/0.0.11340251@1793997107.642204384"
+          rel="noopener">0.0.11340251@1793997107.642204384</a
+        >
+        <span class="ok mono">success</span>
+      </p>
       <p class="foot-note">
-        The live response from the deployed API. HBAR on testnet today; USDC is the production asset.
-        Settlement is not claimed until a transaction id exists.
+        The live response from the deployed API, fetched on load. One payment settled through a
+        facilitator we run: 0.1 HBAR to the payee, 0.00146 HBAR fee, and the Hedera mirror node reports
+        SUCCESS. Click the transaction id to check it yourself.
       </p>
     </div>
   </div>
@@ -217,6 +239,34 @@
     color: var(--muted);
     font-size: 13px;
   }
+  .settle {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 12px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .settle a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-strong);
+    overflow-wrap: anywhere;
+  }
+
+  .settle a:hover {
+    color: var(--ember);
+    border-color: var(--ember);
+  }
+
+  .settle .ok {
+    color: var(--signal);
+  }
+
   .foot-note {
     margin: 14px 0 0;
     color: var(--dim);
