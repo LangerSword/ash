@@ -10,7 +10,8 @@ read the history and refuse the delivery.
 **Status:** live on hardware, hosted, ETHGlobal Mumbai 2026.
 
 - Site: https://langersword.github.io/ash/ (Svelte 5 + GSAP, deployed by GitHub Actions)
-- API + same site from one origin: the tunnel URL in `site/public/config.json`
+- API: https://api.langersword.in (named Cloudflare tunnel to the laptop)
+- Demo script: `demo-script.md` · submission copy: `submission-copy.md`
 - Run locally: `python3 device/demo_api.py` and `cd site && npm run dev`
 
 ## Why

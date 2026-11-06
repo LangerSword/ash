@@ -68,7 +68,10 @@ def challenge(resource: str, reason: str = "payment required") -> dict:
 
 def _post(url: str, body: dict) -> dict:
     req = urllib.request.Request(url, data=json.dumps(body).encode(),
-                                 headers={"Content-Type": "application/json"}, method="POST")
+                                 headers={"Content-Type": "application/json",
+                                          "Accept": "application/json",
+                                          "User-Agent": "ash-seal/1.0 (x402 client)"},
+                                 method="POST")
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             return json.loads(r.read().decode())
