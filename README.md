@@ -50,6 +50,17 @@ derive after  ERR:not_armed  # key is gone
 reprovision   state=1 master=1             # dev-only
 ```
 
+## Live 0G decision (measured 6 Nov, 10:50 UTC)
+
+| call | model | latency | request id (from `x_0g_trace`) | decision |
+|---|---|---|---|---|
+| Tier 1 classify | gemini-2.5-flash-lite | 1.78 s | `chatcmpl-20261106104417…` | hold / handling |
+| Tier 2 release | gemini-2.5-flash-lite | 1.88 s | `18f73aef-3789-40e3-987d-178d2174d79f` | release / consistent |
+
+Note: `glm-5.2` is a reasoning model (254 reasoning tokens, ~7 s) and misses a 5 s deadline;
+gemini-2.5-flash-lite returns strict JSON in ~1.8 s. The Router does not surface a TEE verdict on
+this provider, so `tee_verified` is recorded as `unknown`, never `true`.
+
 ## Layout
 
 ```

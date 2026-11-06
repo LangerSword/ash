@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 
 DEFAULT_BASE = "https://router-api.0g.ai"
-DEFAULT_MODEL = "glm-5.2"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 
 TIER1_SYSTEM = (
     "You are a custody incident classifier for a tamper-evident seal. "
@@ -36,6 +36,12 @@ TIER2_SYSTEM = (
 )
 
 
+def _rid(payload: dict):
+    """Prefer the 0G trace request id; fall back to the completion id."""
+    trace = payload.get("x_0g_trace") or {}
+    return trace.get("request_id") or payload.get("id")
+
+
 class RouterError(Exception):
     pass
 
@@ -52,7 +58,7 @@ class Router:
 
     # ------------------------------------------------------------------ http
     def _chat(self, system: str, user: str, verify_tee: bool = False,
-              max_tokens: int = 64) -> dict:
+              max_tokens: int = 128) -> dict:
         body = {
             "model": self.model,
             "messages": [{"role": "system", "content": system},
@@ -95,20 +101,24 @@ class Router:
         out.setdefault("cause", "unknown")
         if out["decision"] not in ("hold", "wipe"):
             out["decision"] = "wipe"
-        out["request_id"] = payload.get("id")
+        out["request_id"] = _rid(payload)
+        out["trace"] = payload.get("x_0g_trace")
         out["mock"] = False
         return out
 
     def release(self, seal: dict, human: str) -> dict:
         payload = self._chat(TIER2_SYSTEM,
                              json.dumps({"seal": seal, "human": human}, sort_keys=True),
-                             verify_tee=True, max_tokens=96)
+                             verify_tee=True, max_tokens=128)
         out = self._content(payload)
         out.setdefault("decision", "deny")
         if out["decision"] not in ("release", "deny"):
             out["decision"] = "deny"
-        out["request_id"] = payload.get("id")
-        out["tee_verified"] = bool(payload.get("tee_verified", payload.get("verified", False)))
+        out["request_id"] = _rid(payload)
+        out["trace"] = payload.get("x_0g_trace")
+        # The Router does not surface a TEE verdict on this provider; record
+        # "unknown" rather than claiming verification.
+        out["tee_verified"] = payload.get("tee_verified")
         out["mock"] = False
         return out
 

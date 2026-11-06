@@ -104,7 +104,7 @@ class SealService:
         return True, "ok"
 
     # ---------------------------------------------------------------- seal
-    def seal(self, container: str, payload: Path, note: str = "") -> dict:
+    def seal(self, container: str, payload: Path, owner: str = "", note: str = "") -> dict:
         st = self.mcu.status()
         if st.get("state") != 1 or not st.get("master"):
             raise Denied(f"cannot seal in state {st}")
@@ -122,6 +122,7 @@ class SealService:
             "payload_sha256": header["plaintext_sha256"],
             "header": header,
             "note": note,
+            "owner": owner,
         }
         rec["hash"] = self._append(rec)
         self._last = rec
@@ -143,7 +144,8 @@ class SealService:
                           "reason": "key_destroyed", "at": int(time.time())})
             raise KeyDestroyed("key destroyed")
 
-        ok, reason, meta = self.decider.release({"container": container}, human)
+        seal_rec = self._seal_record(container)
+        ok, reason, meta = self.decider.release(seal_rec, human)
         if not ok:
             self._append({"event": "UNSEAL_DENIED", "container": container,
                           "reason": f"0g:{reason}", "meta": meta, "at": int(time.time())})
@@ -157,6 +159,17 @@ class SealService:
                "at": int(time.time()), "0g": meta, "payload_sha256": header["plaintext_sha256"]}
         rec["hash"] = self._append(rec)
         return rec
+
+    def _seal_record(self, container: str) -> dict:
+        if not self.ledger.exists():
+            raise Denied("no seal")
+        for line in reversed(self.ledger.read_text().splitlines()):
+            r = json.loads(line)
+            if r.get("event") == "SEALED" and r.get("container") == container:
+                return {"container": container, "owner": r.get("owner", ""),
+                        "payload_sha256": r.get("payload_sha256"),
+                        "created_at": r.get("at")}
+        raise Denied("no seal for container")
 
     def _nonce_for(self, container: str) -> str:
         if not self.ledger.exists():
