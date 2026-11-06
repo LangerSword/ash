@@ -246,6 +246,8 @@ class Handler(BaseHTTPRequestHandler):
                 "erase_us": 874, "wipe_us": 1321,
                 "bridge_p50_ms": 6.19, "bridge_p95_ms": 7.20,
                 "tier1_p50_s": 2.05, "tier1_cost_usd_micro": 38, "deadline_ms": 5000,
+                "mock": svc.mock,
+                "world": "static" if isinstance(svc.world, StaticWorld) else "idkit",
             })
         if self.path.startswith("/world/qr"):
             from urllib.parse import urlparse, parse_qs

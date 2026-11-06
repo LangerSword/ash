@@ -1,26 +1,19 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import BurnHero from "./components/BurnHero.svelte";
+  import HeroBurn from "./components/HeroBurn.svelte";
   import TierScroll from "./components/TierScroll.svelte";
-  import DemoPanel from "./components/DemoPanel.svelte";
+  import Evidence from "./components/Evidence.svelte";
   import UseCase from "./components/UseCase.svelte";
   import Docs from "./components/Docs.svelte";
   import Install from "./components/Install.svelte";
-  import { start, stop } from "./lib/store.svelte";
-
-  onMount(() => {
-    void start();
-    return () => stop();
-  });
 </script>
 
-<a class="skip" href="#demo">Skip to the live seal</a>
+<a class="skip" href="#evidence">Skip to the evidence</a>
 
 <header class="nav">
   <a class="mark" href="#top">ASH</a>
   <nav aria-label="Sections">
     <a href="#how">How it works</a>
-    <a href="#demo">Live seal</a>
+    <a href="#evidence">Evidence</a>
     <a href="#docs">Docs</a>
     <a href="#install">Install</a>
   </nav>
@@ -34,38 +27,37 @@
 </header>
 
 <main id="top">
-  <section class="masthead">
-    <div class="masthead-copy">
-      <p class="kicker mono">tamper-responsive seal · arduino uno q</p>
-      <h1>Open it the<br />wrong way.<br /><em>It becomes ash.</em></h1>
-      <p class="sub">
-        A seal for confidential shipments. Break the loop and the key dies in the chip before anyone
-        reads a byte.
-      </p>
-      <div class="actions">
-        <a class="btn" data-kind="primary" href="#install">Install the app</a>
-        <a class="btn" href="#how">How it decides</a>
+  <section class="hero">
+    <div class="hero-in">
+      <div class="hero-copy">
+        <p class="mono kicker">tamper-responsive seal · arduino uno q</p>
+        <h1>Open it the<br />wrong way.<br /><span>It becomes ash.</span></h1>
+        <p class="sub">
+          A seal for confidential shipments. Break the loop and the key dies in the chip before anyone
+          reads a byte.
+        </p>
+        <div class="actions">
+          <a class="btn" data-kind="primary" href="#install">Install</a>
+          <a class="btn" href="#how">How it decides</a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <HeroBurn />
+        <p class="mono caption">the seal runs its own sequence, no click</p>
       </div>
     </div>
-    <div class="masthead-visual">
-      <BurnHero />
-      <p class="caption mono">try it · the box on your screen is not a video</p>
+
+    <div class="hero-spec">
+      <div><b>240 µs</b><span>key erase</span></div>
+      <div><b>5 000 ms</b><span>model deadline</span></div>
+      <div><b>2.05 s</b><span>0G decision, p50</span></div>
+      <div><b>0</b><span>network calls on the kill path</span></div>
     </div>
   </section>
 
   <TierScroll />
-
-  <section class="live" id="demo">
-    <div class="live-head">
-      <h2>The seal, live.</h2>
-      <p>
-        This panel talks to the board on the desk over its own API. Seal, bend the loop, cut it, and
-        watch the state change. If the board is offline it says so.
-      </p>
-    </div>
-    <DemoPanel />
-  </section>
-
+  <Evidence />
   <UseCase />
   <Docs />
   <Install />

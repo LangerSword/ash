@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ash",
+  "version": "0.1.0",
+  "identifier": "in.langersword.ash",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5183",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Ash",
+        "width": 1000,
+        "height": 720,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["appimage"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"],
+    "resources": ["bin/ash-service"],
+    "category": "Utility",
+    "shortDescription": "Seal that destroys the data if you open it",
+    "longDescription": "A tamper-responsive seal. The payload key lives in the UNO Q's MCU; breaking the loop destroys it. Ambiguous events go to 0G with a hard deadline; unsealing needs a World proof and a 0G release."
+  }
+}

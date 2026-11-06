@@ -8,4 +8,10 @@ node_modules/
 
 # local track notes (not for the public repo yet)
 docs/tracks/
-app/
+
+# desktop app build output
+app/node_modules/
+app/dist/
+app/src-tauri/target/
+app/src-tauri/bin/ash-service
+dist/
