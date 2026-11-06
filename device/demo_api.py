@@ -22,6 +22,34 @@ from og import MockRouter, Router, RouterDecider  # noqa: E402
 from seal_service import Denied, FakeMcu, KeyDestroyed, SealService  # noqa: E402
 from world_idkit import StaticWorld, WorldError, WorldIdKit  # noqa: E402
 
+
+class HttpMcu:
+    """Talks to the board's app over `adb forward tcp:8081 tcp:8080`."""
+
+    def __init__(self, base: str = "http://127.0.0.1:8081"):
+        self.base = base
+
+    def _post(self, path: str, body: dict) -> dict:
+        import urllib.request
+        req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.loads(r.read().decode())
+
+    def _get(self, path: str) -> dict:
+        import urllib.request
+        with urllib.request.urlopen(self.base + path, timeout=10) as r:
+            return json.loads(r.read().decode())
+
+    def status(self) -> dict:
+        return json.loads(self._get("/status")["mcu"])
+
+    def arm(self) -> dict:
+        return json.loads(self._post("/arm", {})["mcu"])
+
+    def derive(self, nonce_hex: str) -> str:
+        return str(self._post("/derive", {"nonce": nonce_hex})["key"])
+
 ROOT = Path(__file__).resolve().parent.parent
 DEMO = ROOT / "demo"
 DEMO.mkdir(exist_ok=True)
@@ -39,6 +67,9 @@ os.environ.update({k: v for k, v in env.items() if k not in os.environ})
 
 
 def make_world():
+    if os.environ.get("ASH_WORLD", "idkit") == "static":
+        print("WARN: World is STATIC ('good')", flush=True)
+        return StaticWorld({"good": "human-001"})
     rp = os.environ.get("WORLD_RP_ID", "")
     if rp:
         return WorldIdKit(rp)
@@ -53,7 +84,13 @@ def make_decider():
     return RouterDecider(Router())
 
 
-svc = SealService(FakeMcu(), make_world(), make_decider(), STORE, mock=os.environ.get("ASH_MOCK", "1") == "1")
+if os.environ.get("ASH_MCU", "board") == "board":
+    print("MCU: board via http://127.0.0.1:8081", flush=True)
+    mcu = HttpMcu(os.environ.get("ASH_MCU_URL", "http://127.0.0.1:8081"))
+else:
+    print("MCU: FakeMcu (no hardware)", flush=True)
+    mcu = FakeMcu()
+svc = SealService(mcu, make_world(), make_decider(), STORE, mock=os.environ.get("ASH_MOCK", "0") == "1")
 if not PAYLOAD.exists():
     PAYLOAD.write_bytes(b"Ash demo payload: settlement agreement, 6 Nov 2026\n")
 
@@ -93,20 +130,27 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._send(400, {"error": "bad_json"})
 
+        if self.path in ("/sim", "/reprovision"):
+            try:
+                return self._send(200, svc.mcu._post(self.path, body))
+            except Exception as e:
+                return self._send(500, {"ok": False, "error": str(e)})
+
         if self.path == "/seal":
             try:
-                rec = svc.seal(body.get("container", "C-001"), PAYLOAD,
-                               owner=body.get("owner", ""))
+                c = body.get("container", "C-001")
+                payload = DEMO / f"{c}.bin"
+                payload.write_bytes(PAYLOAD.read_bytes())
+                rec = svc.seal(c, payload, owner=body.get("owner", ""))
                 return self._send(200, {"ok": True, "record": rec})
             except Exception as e:
                 return self._send(409, {"ok": False, "error": str(e)})
 
         if self.path == "/unseal":
-            out = DEMO / "out.bin"
+            c = body.get("container", "C-001")
+            out = DEMO / f"{c}.out"
             try:
-                rec = svc.unseal(body.get("container", "C-001"),
-                                 PAYLOAD.with_suffix(".bin.ash"),
-                                 body.get("proof", ""), out)
+                rec = svc.unseal(c, DEMO / f"{c}.bin.ash", body.get("proof", ""), out)
                 text = out.read_text(errors="replace")[:200]
                 return self._send(200, {"ok": True, "record": rec, "payload": text})
             except (Denied, WorldError, KeyDestroyed) as e:

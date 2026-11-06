@@ -25,6 +25,9 @@
 <div class="row">
   <button id="seal">Seal container</button>
   <button id="unseal">Unseal with World ID</button>
+  <button id="unseal_test" title="local test only, not the World flow">Unseal (test proof)</button>
+  <button id="break">Break loop (sim)</button>
+  <button id="repro">Reprovision</button>
   <span id="state" class="dim">—</span>
 </div>
 
@@ -52,6 +55,23 @@ document.getElementById("seal").onclick = async () => {
       body: JSON.stringify({ container:"C-001" }) }).then(r => r.json());
     log(JSON.stringify(r, null, 2));
   } catch (e) { log("seal failed: " + e); }
+  refresh();
+};
+
+document.getElementById("break").onclick = async () => {
+  const r = await fetch(API + "/sim", { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ closed:0 }) }).then(r => r.json());
+  log(JSON.stringify(r, null, 2)); refresh();
+};
+document.getElementById("repro").onclick = async () => {
+  const r = await fetch(API + "/reprovision", { method:"POST", headers:{"Content-Type":"application/json"},
+    body: "{}" }).then(r => r.json());
+  log(JSON.stringify(r, null, 2)); refresh();
+};
+document.getElementById("unseal_test").onclick = async () => {
+  const r = await fetch(API + "/unseal", { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ container:"C-001", proof:"good" }) }).then(r => r.json());
+  log(JSON.stringify(r, null, 2));
   refresh();
 };
 
