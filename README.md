@@ -54,7 +54,7 @@ reprovision   state=1 master=1             # dev-only
 
 | call | model | latency | request id (from `x_0g_trace`) | decision |
 |---|---|---|---|---|
-| Tier 1 classify | gemini-2.5-flash-lite | 1.78 s | `chatcmpl-20261106104417…` | hold / handling |
+| Tier 1 classify | gpt-4.1-mini (default) | 2.05 s | `3538c131-2f3f-4213-ab6e-e70fbf830620` | hold / handling |
 | Tier 2 release | gemini-2.5-flash-lite | 1.88 s | `18f73aef-3789-40e3-987d-178d2174d79f` | release / consistent |
 
 Note: `glm-5.2` is a reasoning model (254 reasoning tokens, ~7 s) and misses a 5 s deadline;

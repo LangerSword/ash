@@ -15,7 +15,10 @@ import urllib.error
 import urllib.request
 
 DEFAULT_BASE = "https://router-api.0g.ai"
-DEFAULT_MODEL = "gpt-4.1-nano"
+DEFAULT_MODEL = "gpt-4.1-mini"
+# Measured on this Router (6 Nov): most listed models are not served. These three answer
+# with strict JSON; nano is the cheapest (~14 micro-USD per decision).
+FALLBACKS = ["gpt-4.1-mini", "gpt-4.1-nano", "gemini-2.5-flash-lite"]
 
 TIER1_SYSTEM = (
     "You are a custody incident classifier for a tamper-evident seal. "
@@ -94,27 +97,40 @@ class Router:
             raise RouterError(f"non-JSON model output: {e}") from None
 
     # ------------------------------------------------------------------ tiers
+    def _chat_any(self, system: str, user: str, **kw) -> dict:
+        last = None
+        for model in [self.model] + [m for m in FALLBACKS if m != self.model]:
+            try:
+                self.model, prev = model, self.model
+                return self._chat(system, user, **kw)
+            except RouterError as e:
+                last = e
+                self.model = prev
+        raise last
+
     def classify(self, features: dict) -> dict:
-        payload = self._chat(TIER1_SYSTEM, json.dumps(features, sort_keys=True))
+        payload = self._chat_any(TIER1_SYSTEM, json.dumps(features, sort_keys=True))
         out = self._content(payload)
         out.setdefault("decision", "wipe")
         out.setdefault("cause", "unknown")
         if out["decision"] not in ("hold", "wipe"):
             out["decision"] = "wipe"
         out["request_id"] = _rid(payload)
+        out["model"] = payload.get("model")
         out["trace"] = payload.get("x_0g_trace")
         out["mock"] = False
         return out
 
     def release(self, seal: dict, human: str) -> dict:
-        payload = self._chat(TIER2_SYSTEM,
-                             json.dumps({"seal": seal, "human": human}, sort_keys=True),
-                             verify_tee=True, max_tokens=128)
+        payload = self._chat_any(TIER2_SYSTEM,
+                                 json.dumps({"seal": seal, "human": human}, sort_keys=True),
+                                 verify_tee=True, max_tokens=128)
         out = self._content(payload)
         out.setdefault("decision", "deny")
         if out["decision"] not in ("release", "deny"):
             out["decision"] = "deny"
         out["request_id"] = _rid(payload)
+        out["model"] = payload.get("model")
         out["trace"] = payload.get("x_0g_trace")
         # The Router does not surface a TEE verdict on this provider; record
         # "unknown" rather than claiming verification.
