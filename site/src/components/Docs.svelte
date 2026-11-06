@@ -36,7 +36,7 @@ POST /seal          encrypt a payload under a derived key
 POST /unseal        release the key after proof and policy
 POST /sim           drive the loop: flex, cut, close
 GET  /ledger        hash-chained episode records
-GET  /attestation/{container}  402 challenge, then the record</code></pre>
+GET  /attestation/:container  402 challenge, then the record</code></pre>
         <p>Errors are one sentence of cause and one of action. No stack traces on the wire.</p>
       </div>
     </details>

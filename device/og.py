@@ -15,19 +15,29 @@ import urllib.error
 import urllib.request
 
 DEFAULT_BASE = "https://router-api.0g.ai"
-DEFAULT_MODEL = "gpt-4.1-mini"
+DEFAULT_MODEL = os.environ.get("OG_MODEL", "0gm-1.0-35b-a3b")
 # Measured on this Router (6 Nov): most listed models are not served. These three answer
 # with strict JSON; nano is the cheapest (~14 micro-USD per decision).
 FALLBACKS = ["gpt-4.1-mini", "gpt-4.1-nano", "gemini-2.5-flash-lite"]
 
+# 0G's in-house model thinks by default, which eats the whole token budget and
+# returns an empty JSON body. Force non-thinking for the deadline path.
+THINKING_OFF = {"chat_template_kwargs": {"enable_thinking": False}, "reasoning_effort": "minimal"}
+
 TIER1_SYSTEM = (
     "You are a custody incident classifier for a tamper-evident seal. "
-    "Input is a compact feature vector from a wire loop: ADC counts and timing. "
+    "The input is a JSON feature vector from a wire loop read by a digital pin; "
+    "there are no analog values, only edges and timings. Fields: "
+    "edges (number of open transitions in the last 500 ms), open_ms (how long the loop "
+    "was open in the most recent event), since_arm_ms (uptime when the event fired), "
+    "counter (wipes so far), policy, deadline_ms. "
     "Return strict JSON only: "
     '{"decision":"hold|wipe","cause":"handling|intrusion|unknown"}. '
-    "hold means the event is consistent with handling and the seal may stay armed. "
-    "wipe means treat it as intrusion. If the evidence is insufficient, return "
-    '{"decision":"wipe","cause":"unknown"}. Never invent events not present in the input.'
+    "hold when the event is short and clean: open_ms under 250, edges 1 or 2, loop closed "
+    "again — that is a box being moved, a lid seated, a cable brushed. "
+    "wipe when the open is long (open_ms 250 or more), when edges keep recurring, or when "
+    "the input is malformed or missing fields — fail closed. "
+    "Never invent events that are not in the input."
 )
 
 TIER2_SYSTEM = (
@@ -70,6 +80,8 @@ class Router:
             "temperature": 0,
             "response_format": {"type": "json_object"},
         }
+        if self.model.startswith("0gm-"):
+            body.update(THINKING_OFF)
         if verify_tee:
             body["verify_tee"] = True
         req = urllib.request.Request(
