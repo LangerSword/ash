@@ -75,8 +75,8 @@ class StaticWorld:
     def __init__(self, mapping: dict[str, str]):
         self.mapping = mapping
 
-    def verify(self, result) -> str:
-        token = result if isinstance(result, str) else json.dumps(result, sort_keys=True)
+    def verify(self, proof: str) -> str:
+        token = proof if isinstance(proof, str) else json.dumps(proof, sort_keys=True)
         if token in self.mapping:
             return self.mapping[token]
         raise WorldError("proof rejected")

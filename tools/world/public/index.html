@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ash — unseal</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background:#0b0b0c; color:#e8e8e8; margin:0; padding:32px; }
+  h1 { font-size:18px; font-weight:600; letter-spacing:.02em; margin:0 0 4px; }
+  .sub { color:#8a8a8a; margin-bottom:24px; }
+  .row { display:flex; gap:12px; align-items:center; margin:12px 0; }
+  button { background:#1a1a1d; color:#eee; border:1px solid #2e2e33; padding:10px 14px; font:inherit; cursor:pointer; }
+  button:hover { border-color:#555; }
+  button:disabled { opacity:.4; cursor:default; }
+  #qr { background:#fff; padding:8px; width:260px; height:260px; display:none; }
+  #qr img, #qr svg { width:260px; height:260px; display:block; }
+  pre { background:#121214; border:1px solid #222; padding:12px; white-space:pre-wrap; word-break:break-word; min-height:120px; }
+  .ok { color:#5ad46a; } .bad { color:#ff6b6b; } .dim { color:#8a8a8a; }
+</style>
+</head>
+<body>
+<h1>Ash</h1>
+<div class="sub">Unseal requires a World ID proof, then a 0G release decision, then the MCU releases the key.</div>
+
+<div class="row">
+  <button id="seal">Seal container</button>
+  <button id="unseal">Unseal with World ID</button>
+  <span id="state" class="dim">—</span>
+</div>
+
+<div id="qr"></div>
+<pre id="log">ready</pre>
+
+<script src="/idkit.global.js"></script>
+<script>
+const API = "http://127.0.0.1:8080";
+const log = (m) => { document.getElementById("log").textContent = m; };
+const state = (m, cls="dim") => { const el = document.getElementById("state"); el.textContent = m; el.className = cls; };
+
+async function refresh() {
+  try {
+    const r = await fetch(API + "/status").then(r => r.json());
+    const map = {1:"ARMED", 2:"UNSEALED", 3:"TAMPERED"};
+    state(map[r.state] || JSON.stringify(r), r.state === 3 ? "bad" : "ok");
+  } catch (e) { state("api down", "bad"); }
+}
+setInterval(refresh, 2000); refresh();
+
+document.getElementById("seal").onclick = async () => {
+  try {
+    const r = await fetch(API + "/seal", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ container:"C-001" }) }).then(r => r.json());
+    log(JSON.stringify(r, null, 2));
+  } catch (e) { log("seal failed: " + e); }
+  refresh();
+};
+
+document.getElementById("unseal").onclick = async () => {
+  const btn = document.getElementById("unseal");
+  btn.disabled = true;
+  try {
+    const cfg = await fetch("/api/config").then(r => r.json());
+    if (!cfg.has_key) { log("No World signing key configured on the helper (check .env)."); return; }
+    const sig = await fetch("/api/rp-signature", { method:"POST" }).then(r => r.json());
+    if (sig.error) { log("RP signature failed: " + sig.error); return; }
+
+    const request = await IDKit.request({
+      app_id: cfg.app_id,
+      action: cfg.action,
+      rp_context: {
+        rp_id: cfg.rp_id,
+        nonce: sig.nonce,
+        created_at: sig.created_at,
+        expires_at: sig.expires_at,
+        signature: sig.sig,
+      },
+      allow_legacy_proofs: true,
+      environment: "production",
+    });
+
+    const qr = document.getElementById("qr");
+    qr.style.display = "block";
+    // Built with DOM APIs rather than innerHTML; the URL is encoded, not trusted markup.
+    qr.replaceChildren();
+    const img = document.createElement("img");
+    img.alt = "World ID QR";
+    img.src = "/api/qr?data=" + encodeURIComponent(request.connectorURL);
+    qr.appendChild(img);
+    log("Scan with World ID to prove it is you, then wait…");
+
+    const result = await request.pollUntilCompletion();
+    log("Proof received, verifying server-side…");
+
+    const out = await fetch(API + "/unseal", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ container:"C-001", proof: result }) }).then(r => r.json());
+    log(JSON.stringify(out, null, 2));
+  } catch (e) {
+    log("unseal failed: " + (e && e.message ? e.message : e));
+  } finally {
+    btn.disabled = false;
+    refresh();
+  }
+};
+</script>
+</body>
+</html>
