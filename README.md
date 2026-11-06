@@ -7,8 +7,7 @@ decides hold or wipe against a hard deadline — and no answer means wipe. Autho
 World authentication and a 0G release decision. An agent pays $0.01 in USDC over x402 on Hedera to
 read the history and refuse the delivery.
 
-**Status:** build in progress (ETHGlobal Mumbai, 6–7 Nov 2026). Nothing here is finished; the
-README is updated as gates pass.
+**Status:** Tier 0 works on hardware (see below). Build in progress, ETHGlobal Mumbai, 6–7 Nov 2026.
 
 ## Why
 
@@ -39,6 +38,17 @@ That is safe but unusable for handling, which is why the model sits in the loop.
 - Flash: 8 KB pages; MASTER page at offset 2080768; erase 874 µs, write 254 µs, wipe with read-back 1321 µs.
 - Bridge: 1000 calls, 0 errors, p50 6.19 ms, p95 7.20 ms.
 - Board network: ETHGlobal WiFi, direct HTTPS works (0G 200, World sandbox 200).
+
+## Tier 0 on hardware (measured 6 Nov, 09:15 UTC)
+
+```
+selftest      ok            # SHA-256 and HMAC-SHA256 against published vectors
+status        state=1 counter=0 master=1 loop=0
+derive(x2)    identical      # deterministic, from MCU-held MASTER
+open loop     state=3 counter=1 master=0   # wipe, read-back verified
+derive after  ERR:not_armed  # key is gone
+reprovision   state=1 master=1             # dev-only
+```
 
 ## Layout
 
