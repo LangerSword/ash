@@ -46,6 +46,8 @@ class WorldIdKit:
                 raise WorldError("proof is not a JSON object") from None
         if not isinstance(result, dict) or not result:
             raise WorldError("proof is empty")
+        if result.get("success") is False:
+            raise WorldError(f"proof not completed: {result.get('error') or 'unknown'}")
         url = f"{self.base}/api/v4/verify/{self.rp_id}"
         outgoing = dict(result)
         if self.action and not outgoing.get("action"):

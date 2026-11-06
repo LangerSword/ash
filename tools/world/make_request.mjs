@@ -51,6 +51,10 @@ try {
   const result = await request.pollUntilCompletion({ timeout: 240000 });
   fs.writeFileSync("/tmp/proof.json", JSON.stringify(result, null, 2));
   console.log("PROOF_OK", JSON.stringify(result).slice(0, 200));
+  if (!result || result.success === false) {
+    console.log("NO_PROOF", result?.error ?? "no result", "- nothing to unseal");
+    process.exit(0);
+  }
   const unseal = await fetch("http://127.0.0.1:8080/unseal", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

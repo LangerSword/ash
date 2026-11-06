@@ -1,16 +1,16 @@
 # Ash grade
 
-Run 2026-11-06 20:39 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
+Run 2026-11-06 20:44 UTC against https://langersword.github.io/ash/ and https://api.langersword.in.
 
-**Gates: PASS** · **Score: 100/100** (13/13 checks) · **Controls: all caught**
+**Gates: FAIL** · **Score: 0/100** (9/12 checks) · void, a gate failed · **Controls: NOT ALL CAUGHT**
 
 ## Gates (pass/fail, not scored)
 
 | Gate | Verdict | Evidence |
 |---|---|---|
 | site reachable | PASS | HTTP 200, 1572 B |
-| api status | PASS | HTTP 200, keys ['amber', 'counter', 'loop', 'master', 'state'] |
-| unseal refuses empty proof | PASS | HTTP 403: b'{"ok": false, "error": "WorldError: proof is not a JSON object"}' |
+| api status | FAIL | HTTP 530, unparseable |
+| unseal refuses empty proof | FAIL | HTTP 530: b'error code: 1033\n' |
 | shipped assets match source | PASS | 3/3 identical |
 | no settlement/mainnet overclaims | PASS | banned hits: none |
 
@@ -25,11 +25,10 @@ Run 2026-11-06 20:39 UTC against https://langersword.github.io/ash/ and https://
 | hero plays without a click | pass | rAF True, no button True |
 | site shows the live payee | pass | payee 0.0.11344783 found |
 | claimed settlement exists on-chain | pass | 0.0.11340251@1793997107.642204384: SUCCESS, payee +10000000 |
-| x402 challenge matches config | pass | payTo 0.0.11344783, amount 10000000 |
-| malformed payment rejected | pass | HTTP 402: b'{"ok": false, "error": "bad X-PAYMENT: Invalid base64-encoded string: ' |
-| ledger chain verifies | pass | ok=True, records=24 |
+| x402 challenge is well formed | FAIL | unparseable 402 |
+| malformed payment rejected | FAIL | HTTP 530: b'error code: 1033\n' |
+| ledger chain verifies | FAIL | HTTP 530 |
 | firmware has wipe with read-back | pass | missing none |
-| hardware wipe | pass | wiped True, re-armed True |
 | seal/unseal policy oracle | pass | 5/5 rules; regressed impl caught |
 
 ## Not covered by this grade
@@ -44,7 +43,7 @@ Run 2026-11-06 20:39 UTC against https://langersword.github.io/ash/ and https://
 
 | Control | Verdict |
 |---|---|
-| claim drift 874→241 | caught |
+| claim drift 874→241 | MISSED |
 | fake endpoint in docs | caught |
 | anchor to a missing id | caught |
 | reduced-motion guard removed | caught |
