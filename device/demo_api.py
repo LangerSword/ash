@@ -24,12 +24,18 @@ sys.path.insert(0, str(Path(__file__).parent))
 from og import MockRouter, Router, RouterDecider  # noqa: E402
 from seal_service import Denied, FakeMcu, KeyDestroyed, SealService  # noqa: E402
 from world_idkit import StaticWorld, WorldError, WorldIdKit  # noqa: E402
+from link import DeviceLink  # noqa: E402
+import x402_hedera  # noqa: E402
+
+
+LINK = DeviceLink(os.environ.get("ASH_SERIAL", "3017640407")).start()
 
 
 class HttpMcu:
     """Talks to the board's app over `adb forward tcp:8081 tcp:8080`."""
 
-    def __init__(self, base: str = "http://127.0.0.1:8081"):
+    def __init__(self, base: str | None = None):
+        base = base or f"http://127.0.0.1:{LINK.local_port}"
         self.base = base
 
     def _post(self, path: str, body: dict) -> dict:
@@ -178,7 +184,43 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _attestation(self, container: str):
+        text = svc.ledger.read_text() if svc.ledger.exists() else ""
+        recs = [json.loads(x) for x in text.splitlines() if x]
+        mine = [r for r in recs if r.get("container") == container]
+        if not mine:
+            return None
+        return {
+            "container": container,
+            "events": mine,
+            "ledger_head": recs[-1]["hash"] if recs else "",
+            "ledger_len": len(recs),
+            "mcu": svc.mcu.status(),
+            "issued_at": int(time.time()),
+        }
+
     def do_GET(self):
+        if self.path.startswith("/attestation/"):
+            container = self.path.split("/attestation/", 1)[1].split("?")[0]
+            attestation = self._attestation(container)
+            if attestation is None:
+                return self._send(404, {"ok": False, "error": "unknown container"})
+            if not x402_hedera.ready():
+                return self._send(503, {"ok": False, "error": "hedera_not_configured",
+                                        "hint": "set HEDERA_PAY_TO and X402_FACILITATOR"})
+            payment = self.headers.get("X-PAYMENT") or self.headers.get("x-payment")
+            resource = f"http://{self.headers.get('Host', '127.0.0.1:8080')}/attestation/{container}"
+            if not payment:
+                return self._send(402, x402_hedera.challenge(resource))
+            try:
+                settled = x402_hedera.settle(payment, resource)
+            except x402_hedera.X402Error as e:
+                return self._send(402, {"ok": False, "error": str(e)})
+            return self._send(200, {"ok": True, "attestation": attestation,
+                                    "tx_id": settled["tx_id"], "hashscan": settled["hashscan"],
+                                    "network": settled["network"]})
+        if self.path.startswith("/device"):
+            return self._send(200, LINK.snapshot())
         if self.path.startswith("/site"):
             return self._static()
         if self.path == "/status":

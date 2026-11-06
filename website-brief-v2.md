@@ -182,6 +182,7 @@ GET  /status                -> {"state":1,"counter":0,"master":1,"loop":0,"amber
 GET  /ledger                -> {"records":[{"event":"SEALED","container":"C-001","at":1793966324,"hash":"…","0g":{…}}]}
 GET  /evidence              -> {"erase_us":874,"wipe_us":1321,"bridge_p50_ms":6.19,"bridge_p95_ms":7.2,"tier1_p50_s":2.05,"tier1_cost_usd_micro":38,"deadline_ms":5000}
 GET  /events                -> text/event-stream: event: status | ledger | tier1, data: JSON
+GET  /device                -> {"state":"ready|forwarded|unauthorized|absent|error","serial":"…","api":"http://127.0.0.1:8081","mcu":{…},"detail":"…"}
 POST /seal                  {"container":"C-001","owner":"human-001"} -> {"ok":true,"record":{…}}
 POST /unseal                {"container":"C-001","proof":"<idkit result | \"good\">"} -> {"ok":true,"payload":"…","record":{…}} | 403 {"ok":false,"error":"…"}
 POST /sim                   {"closed":0|1} -> {"mcu":"{…}"}
@@ -190,8 +191,9 @@ GET  /world/config          -> {"app_id":"app_…","rp_id":"rp_…","action":"un
 POST /world/rp-signature    {} -> {"sig":"0x…","nonce":"…","created_at":…,"expires_at":…}
 GET  /wallet/nonce?chain=hedera&account=0.0.1234 -> {"message":"Ash demo login\nnonce: …\nissued: …"}
 POST /wallet/verify         {"chain":"hedera","account":"0.0.1234","signature":"…"} -> {"ok":true,"account":"0.0.1234"}
-GET  /attestation/:container -> 402 {"price":"0.01","asset":"USDC","network":"hedera:testnet"}
-                               paid -> 200 {"attestation":{…},"tx_id":"…","hashscan":"https://hashscan.io/…"}
+GET  /attestation/:container -> 402 {"x402Version":2,"accepts":[{scheme:"exact",network:"hedera:testnet",amount:"10000",asset:"<HTS id>",payTo:"0.0.x",extra:{feePayer:"0.0.y"}}]}
+                               paid -> 200 {"ok":true,"attestation":{…},"tx_id":"…","hashscan":"https://hashscan.io/…"}
+                               503 {"ok":false,"error":"hedera_not_configured"} when unset — never a fake settlement
 ```
 
 State mapping: `1 = ARMED`, `3 = TAMPERED`; `amber` true means Tier 1 in progress. Anything unreachable = `OFFLINE` on the client.
@@ -287,3 +289,77 @@ The live panel must reach `127.0.0.1:8080`. Two options:
 2. **Hosted URL** — GitHub Pages for the explainer, but the demo panel needs a tunnel to the API (Cloudflare Tunnel or Tailscale Funnel). If we host, the panel must degrade gracefully to `DEVICE OFFLINE` and the recorded evidence table carries the proof.
 
 Default: option 1 for the demo video, option 2 if the submission needs a public link. Confirm before deploying.
+
+
+---
+
+## 13. References (take the pattern, not the pixels)
+
+Spend fifteen minutes with these before writing CSS. Take **type scale, spacing rhythm, table density,
+motion restraint, and copy honesty**. Do not copy layouts, and take nothing from the marketing sections.
+
+| Site | What to take | What to leave |
+|---|---|---|
+| `linear.app` | restrained motion, one accent, dense-but-calm hierarchy | the gradient hero, the glow |
+| `vercel.com` | black-on-black layering with 1px borders, monospace metadata | the grid noise |
+| `stripe.com/docs` | documentation-grade tables and code blocks with real values | the illustrations |
+| `raycast.com` | keyboard-first interactions, 120 ms state transitions | the glass |
+| `github.com` (repo view) | status colours used as information, not decoration | the chrome |
+| `tailscale.com` | engineer-to-engineer copy, diagrams that explain a mechanism | the long-form blog tone |
+| `instrument.com` | scale contrast — 40px display against 12px metadata | the editorial serif |
+
+The rule that comes out of them: **one idea per screen, one accent at a time, and every animation
+earns its place by showing a state change.**
+
+---
+
+## 14. Device autodetect (the site must do this without a manual step)
+
+The backend watches for the board and reports it; the site reflects it.
+
+```
+GET /device -> {"state":"ready","serial":"3017640407","api":"http://127.0.0.1:8081",
+                "mcu":{"state":1,"counter":0,"master":1,"loop":0},"detail":""}
+```
+
+States and UI:
+
+| state | meaning | UI |
+|---|---|---|
+| `ready` | board found, API answering | controls enabled; chip shows device state; `serial` in the footer of the panel |
+| `forwarded` | board found, app not answering yet | controls disabled; `Booting the board…` |
+| `unauthorized` | USB debugging not allowed | `Authorise USB debugging on the board` |
+| `absent` | no board on USB | `Connect a UNO Q over USB` |
+| `error` | adb or forward failed | show `detail` verbatim |
+
+Poll `/device` every 2 s, alongside `/status`. When the state changes to `ready`, do a single
+`Seal`-less refresh: fetch `/ledger` and `/status` once, then resume polling. Never enable a button
+on a stale `ready`.
+
+The detection itself lives in `device/link.py`: `adb devices` → pick the known serial → `adb forward
+tcp:8081 tcp:8080` → `GET /status`. The site does not talk to adb; it only reads `/device`.
+
+---
+
+## 15. Track integration (what the site must surface)
+
+Each track has a short, factual line in the evidence section and its own page in `docs/tracks/`.
+
+| track | what is real today | what is pending | where the site says it |
+|---|---|---|---|
+| **0G Physical AI** | decision in the loop, request id per decision, 2.05 s p50, safe-stop that wipes | 0G Storage episode uploader | Evidence table + Tier 1 row + ledger `0G` column |
+| **World IDKit** | IDKit page, verify client, nullifier stored, denial path | a valid 32-byte RP signing key | Tier 2 row + the unseal button's disabled state |
+| **Hedera x402** | v2 `exact` challenge, verify/settle client, HashScan URL | funded testnet account + facilitator | `/attestation` panel: `402 → settled → tx id` |
+
+Do not claim a settled Hedera payment until there is a transaction id on screen. Do not claim a World
+proof until a real nullifier comes back.
+
+---
+
+## 16. Hosted URLs (current)
+
+- Site: `https://langersword.github.io/ash/` (GitHub Pages, deployed by Actions from `docs/`; it builds
+  `site/` automatically once `site/package.json` exists).
+- Live API + same page from one origin: the current tunnel URL, stored in `docs/config.json` as
+  `apiBase`. If the tunnel restarts, update that file with one commit.
+- The panel must read `apiBase` from `config.json` at runtime, not from a build-time constant.
