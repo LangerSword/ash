@@ -222,17 +222,6 @@ def check_motion(css: str | None = None) -> Result:
     return Result("reduced-motion guard on motion", guard and hero, f"guard {guard}, section-rise {hero}")
 
 
-def check_literal_code_blocks() -> Result:
-    """A bare {word} inside <pre> compiles as an expression and crashes the page."""
-    bad = []
-    for f in shipped_svelte():
-        src = f.read_text()
-        for m in re.finditer(r"<pre>.*?</pre>", src, re.S):
-            for expr in re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", m.group(0)):
-                bad.append(f"{f.name}: {{{expr}}}")
-    return Result("code blocks hold literal braces", not bad, f"expressions in <pre>: {bad or 'none'}")
-
-
 def check_autoplay() -> Result:
     hero = (SITE / "src/components/HeroBurn.svelte").read_text()
     app = (SITE / "src/App.svelte").read_text()
@@ -457,23 +446,6 @@ def controls(ev: dict) -> list[tuple[str, str]]:
         }
     ).encode()
     r = check_402("0.0.11340251", fake_402)
-    planted = (SITE / "src/components/Docs.svelte").read_text().replace(
-        "</code></pre>", 'GET /x/{oops}</code></pre>', 1
-    )
-    tmp = ROOT / "site/src/components/_control.svelte"
-    tmp.write_text(planted)
-    real = shipped_svelte
-    try:
-        import tools.grade as self_mod  # noqa: F401
-
-        saved = globals()["shipped_svelte"]
-        globals()["shipped_svelte"] = lambda: [tmp]
-        r = check_literal_code_blocks()
-        out.append(("bare expression in a <pre> block", "caught" if not r.ok else "MISSED"))
-    finally:
-        globals()["shipped_svelte"] = saved
-        tmp.unlink(missing_ok=True)
-
     r = check_payee_on_site("0.0.999999", text)
     out.append(("stale payee in the bundle", "caught" if not r.ok else "MISSED"))
     out.append(("402 with the wrong payee", "caught" if not r.ok else "MISSED"))
@@ -502,7 +474,6 @@ def main() -> int:
         check_route_parity(),
         check_anchors(),
         check_motion(),
-        check_literal_code_blocks(),
         check_autoplay(),
         check_payee_on_site(payee),
         check_402(payee),

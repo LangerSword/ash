@@ -1,5 +1,6 @@
 mod config;
 mod device;
+mod relay;
 mod service;
 
 use serde::Serialize;
@@ -159,6 +160,7 @@ pub fn run() {
             arm_signature
         ])
         .setup(move |app| {
+            relay::start(9001);
             let handle = app.handle().clone();
             let serial = cfg.serial.clone();
             std::thread::spawn(move || {
@@ -166,6 +168,7 @@ pub fn run() {
                 let mut forwarded_hits = 0u32;
                 let mut last_autostart = 0u64;
                 let mut last_state = String::new();
+                let mut reverse_done = false;
                 loop {
                     let snap = device::poll(&serial, state.board_port);
 
@@ -191,6 +194,15 @@ pub fn run() {
                     if snap.state != last_state {
                         config::log_line(&format!("device: {last_state} -> {}", snap.state));
                         last_state = snap.state.clone();
+                    }
+                    if snap.state == "ready" && !reverse_done && !snap.serial.is_empty() {
+                        match device::ensure_reverse(&snap.serial, 9001) {
+                            Ok(()) => {
+                                reverse_done = true;
+                                config::log_line("relay: adb reverse tcp:9001 in place");
+                            }
+                            Err(e) => config::log_line(&format!("relay: adb reverse failed · {e}")),
+                        }
                     }
                     if let Ok(mut slot) = state.device.lock() {
                         *slot = snap;

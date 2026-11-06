@@ -185,6 +185,12 @@ pub fn poll(preferred_serial: &str, port: u16) -> DeviceSnapshot {
     snap
 }
 
+/// Make the board's localhost:port reach this machine (used for the 0G relay).
+pub fn ensure_reverse(serial: &str, port: u16) -> Result<(), String> {
+    let p = format!("tcp:{port}");
+    adb(&["-s", serial, "reverse", &p, &p]).map(|_| ())
+}
+
 pub fn start_board_app(serial: &str) -> Result<String, String> {
     if serial.is_empty() {
         return Err("no board serial: connect the UNO Q first".into());

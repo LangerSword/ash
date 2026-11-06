@@ -36,6 +36,10 @@ else:
 
 
 
+class McuUnavailable(Exception):
+    """The board bridge is down or restarting; this is a state, not a crash."""
+
+
 class HttpMcu:
     """Talks to the board's app over `adb forward tcp:8081 tcp:8080`."""
 
@@ -47,13 +51,19 @@ class HttpMcu:
         import urllib.request
         req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            return json.loads(r.read().decode())
+        try:
+            with urllib.request.urlopen(req, timeout=6) as r:
+                return json.loads(r.read().decode())
+        except Exception as e:  # bridge down or restarting: a state, not a crash
+            raise McuUnavailable(f"{type(e).__name__}: {e}") from e
 
     def _get(self, path: str) -> dict:
         import urllib.request
-        with urllib.request.urlopen(self.base + path, timeout=10) as r:
-            return json.loads(r.read().decode())
+        try:
+            with urllib.request.urlopen(self.base + path, timeout=6) as r:
+                return json.loads(r.read().decode())
+        except Exception as e:
+            raise McuUnavailable(f"{type(e).__name__}: {e}") from e
 
     def status(self) -> dict:
         return json.loads(self._get("/status")["mcu"])
@@ -208,6 +218,12 @@ class Handler(BaseHTTPRequestHandler):
         }
 
     def do_GET(self):
+        try:
+            return self._do_GET()
+        except McuUnavailable as e:
+            return self._send(503, {"ok": False, "error": "mcu_unavailable", "detail": str(e)})
+
+    def _do_GET(self):
         if self.path.startswith("/attestation/"):
             container = self.path.split("/attestation/", 1)[1].split("?")[0]
             attestation = self._attestation(container)
@@ -314,6 +330,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
     def do_POST(self):
+        try:
+            return self._do_POST()
+        except McuUnavailable as e:
+            return self._send(503, {"ok": False, "error": "mcu_unavailable", "detail": str(e)})
+
+    def _do_POST(self):
         n = int(self.headers.get("Content-Length") or 0)
         try:
             body = json.loads(self.rfile.read(n) or b"{}")

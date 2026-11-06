@@ -80,7 +80,7 @@ def og_classify(features):
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=25) as r:
         out = json.loads(r.read().decode())
-    if out.get("status", 200) >= 400:
+    if out.get("status", 200) >= 400 or "body" not in out:
         raise RuntimeError(str(out)[:160])
     p = json.loads(out["body"])
     d = json.loads(p["choices"][0]["message"]["content"])
@@ -103,5 +103,6 @@ def loop():
     time.sleep(0.2)
 
 
+print(f"TIER1 READY model={MODEL} relay={RELAY}", flush=True)
 server.start(8080)
 App.run(user_loop=loop)
