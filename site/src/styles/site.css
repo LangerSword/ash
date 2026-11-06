@@ -387,3 +387,29 @@ h3 {
 #docs .acc {
   border-top-color: var(--border-strong);
 }
+
+/* ---- scroll entry for the interior sections ---- */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    #app,
+    #evidence,
+    #use,
+    #docs,
+    #install {
+      animation: section-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 6% cover 26%;
+    }
+  }
+}
+
+@keyframes section-rise {
+  from {
+    opacity: 0.001;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

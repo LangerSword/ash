@@ -40,11 +40,22 @@ cd app && npm install --include=dev && npm run dev
 cd app/src-tauri && cargo run        # or: npm run tauri dev
 ```
 
+## The signature
+
+The in-app intro and the board play the same film: the wordmark takes ink, a burn front crosses it
+left to right, embers fall, and the word reforms (`src/lib/intro-frames.ts`, 40 frames, 14 fps).
+
+The board copy is fired by **Rust**, not the webview: the UI arms it once (`arm_signature`) and the
+device thread plays it the first time the board answers in that process. A hidden or throttled
+webview cannot swallow it, and a board that is plugged in later still gets its play.
+
 ## How the pieces split
 
 - **Rust owns the device link.** `adb devices` every 2 s, `adb forward tcp:<port> tcp:8080`, probe
-  `/status`, start the board app with `arduino-app-cli`, install the udev rule through `pkexec`. The
-  device screen keeps working when the Python service is down.
+  `/status`, install the udev rule through `pkexec`. If the board is present but its app is not
+  answering for two polls, Rust starts it itself (30 s cooldown) — the common "connected but dead"
+  case recovers without the user finding a button. The device screen keeps working when the Python
+  service is down.
 - **The Python service owns the protocol.** Seal/unseal, the vault, World verification, the 0G
   decision, Hedera x402. The app never reimplements it; it speaks the same contract as the site.
 - **Svelte owns the window.** Intro, legend, matrix mirror, controls, ledger, event log.
@@ -83,6 +94,7 @@ service it passes `ASH_LINK=0` (Rust already owns adb) and `ASH_MCU_URL` for the
 |---|---|
 | `POST /frame {"frames": ["0101…"], "fps": 12}` | play a host-generated animation on the matrix (max 64 frames, 104 chars each) |
 | `GET /ledger/verify` | verify the hash chain server-side; `409` with the offending record index on mismatch |
+| `arm_signature` (Tauri command) | UI hands Rust the 40 frames; Rust plays them on first contact |
 | `GET /evidence` gains `mock` and `world` | so the UI can label a mock 0G decision or a static World verifier honestly |
 
 Service env knobs used by the desktop build: `ASH_API_PORT`, `ASH_STATE_DIR`, `ASH_MCU_URL`,

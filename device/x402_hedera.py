@@ -98,7 +98,9 @@ def settle(x_payment: str, resource: str) -> dict:
     fac = config()["facilitator"].rstrip("/")
     verify = _post(f"{fac}/verify", body)
     if not (verify.get("isValid") or verify.get("valid")):
-        raise X402Error(f"verify failed: {verify.get('invalidReason') or verify}")
+        reason = verify.get("invalidReason") or "unknown"
+        detail = verify.get("invalidMessage") or ""
+        raise X402Error(f"verify failed: {reason}" + (f" · {detail}" if detail else ""))
     settled = _post(f"{fac}/settle", body)
     tx = settled.get("transaction") or settled.get("txId") or settled.get("transactionId")
     if not tx:

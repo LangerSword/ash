@@ -14,9 +14,11 @@ export function explain(e: unknown, logPath = "~/.local/state/ash/app.log"): Fai
     const c = e.body as X402Challenge | null;
     const a = c?.accepts?.[0];
     if (a?.amount) {
-      const amount = Number(a.amount) / 1e6;
+      // 0.0.0 is native HBAR (8 decimals); HTS tokens here are USDC (6).
+      const hbar = (a.asset ?? "") === "0.0.0";
+      const amount = Number(a.amount) / (hbar ? 1e8 : 1e6);
       return f(
-        `Payment required: ${amount} ${a.asset ?? "USDC"} to ${a.payTo ?? "the payee"} on ${a.network ?? "hedera"}.`,
+        `Payment required: ${amount} ${hbar ? "HBAR" : "USDC"} to ${a.payTo ?? "the payee"} on ${a.network ?? "hedera"}.`,
         "The app does not pay automatically. Settle it with the agent key, then read the attestation again.",
         e.message,
       );

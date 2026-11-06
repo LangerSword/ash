@@ -3,8 +3,9 @@
   import Ledger from "./Ledger.svelte";
   import WorldQR from "./WorldQR.svelte";
   import Legend from "./Legend.svelte";
+  import Connection from "./Connection.svelte";
   import { ui } from "../lib/ui.svelte";
-  import { deviceHint } from "../lib/failures";
+  import { connection } from "../lib/connect";
   import { cmd } from "../lib/tauri";
 
   let container = $state("C-001");
@@ -27,7 +28,7 @@
             ? "UNSEALED"
             : "OFFLINE",
   );
-  const hint = $derived(deviceHint(ui.device?.state ?? "starting", ui.device?.detail ?? ""));
+  const conn = $derived(connection(ui.device, ui.runtime?.service ?? null, ui.runtime?.udev_ok ?? true));
   const deadline = $derived(ui.evidence?.deadline_ms ?? 5000);
   const last0g = $derived(ui.last0g);
 
@@ -52,6 +53,12 @@
     confirmCut = false;
     window.clearTimeout(cutTimer);
     void ui.breakLoop();
+  }
+
+  function onConnAction(kind: "start_board" | "udev" | "retry") {
+    if (kind === "start_board") void startBoard();
+    else if (kind === "udev") void installUdev();
+    else void ui.boot();
   }
 
   async function startBoard() {
@@ -95,12 +102,11 @@
       {#if ui.device?.serial}
         <span>UNO Q · {ui.device.serial}</span>
       {:else}
-        <span>{hint.line || "detecting…"}</span>
+        <span>{conn.headline}</span>
       {/if}
       {#if ui.runtime?.service.mock}
         <span class="tag" data-kind="warn">0G mock</span>
       {/if}
-      <span class="tag">sandbox identity</span>
     </div>
 
     <div class="state">
@@ -114,7 +120,9 @@
       <Matrix mode={mode} {amberSince} deadlineMs={deadline} />
       <dl class="kv">
         <dt>state</dt>
-        <dd>{chip} · counter {ui.status?.counter ?? "—"} · master {ui.status ? (ui.status.master ? "present" : "erased") : "—"}</dd>
+        <dd>{chip} · counter {ui.status?.counter ?? "—"}</dd>
+        <dt>master</dt>
+        <dd>{ui.status ? (ui.status.master ? "present" : "erased") : "—"}</dd>
         <dt>loop</dt>
         <dd>{ui.status ? (ui.status.loop ? "open" : "closed") : "—"}</dd>
         <dt>deadline</dt>
@@ -127,31 +135,8 @@
         <dd class="hash" title={ui.ledger.at(-1)?.hash ?? ""}>{ui.lastHash}</dd>
       </dl>
 
-      {#if !ui.serviceOk}
-        <p class="offline">
-          Local service unavailable. The ledger is empty until it answers.
-          <span>Retrying every second.</span>
-        </p>
-      {:else if hint.line}
-        <p class="offline" data-kind="warn">
-          {hint.line}
-          {#if hint.action}<span>{hint.action}</span>{/if}
-        </p>
-      {/if}
-
-      {#if ui.device?.state === "forwarded" || ui.device?.state === "absent" || ui.device?.state === "unauthorized"}
-        <div class="tool-row">
-          {#if ui.device?.state === "forwarded"}
-            <button class="btn" disabled={boardBusy !== ""} onclick={startBoard} data-busy={boardBusy === "board" ? 1 : 0}>
-              Start board app
-            </button>
-          {/if}
-          {#if ui.runtime && !ui.runtime.udev_ok}
-            <button class="btn" disabled={boardBusy !== ""} onclick={installUdev} data-busy={boardBusy === "udev" ? 1 : 0}>
-              Install udev rule
-            </button>
-          {/if}
-        </div>
+      {#if !conn.ready}
+        <Connection {conn} busy={boardBusy} onAction={onConnAction} compact />
       {/if}
       {#if toolNote}<p class="tool-note">{toolNote}</p>{/if}
     </section>
@@ -405,25 +390,6 @@
   .kv dd {
     white-space: normal;
     overflow-wrap: anywhere;
-  }
-
-  .offline {
-    font-size: 11px;
-    color: var(--muted);
-    border-left: 1px solid var(--amber);
-    padding-left: 9px;
-  }
-
-  .offline span {
-    display: block;
-    color: var(--dim);
-    margin-top: 2px;
-  }
-
-  .tool-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
   }
 
   .tool-note {

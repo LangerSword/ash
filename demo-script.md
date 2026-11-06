@@ -6,7 +6,7 @@ site open at https://langersword.github.io/ash/ with the chip reading `ARMED`.
 | time | action | say |
 |---|---|---|
 | 0:00 | Site open on the hero. Click **Open it the wrong way** | "This is a seal. Break it and the key dies before anyone reads a byte." |
-| 0:10 | The box burns into ASH on screen | "That is the promise, not a video. The device does the same thing in 240 microseconds." |
+| 0:10 | The box burns into ASH on screen | "That is the promise, not a video. The device does the same thing in about 1.3 milliseconds." |
 | 0:25 | Click **Seal container** | "Sealing derives a key from the MCU's secret and encrypts the payload. The ledger row is hash-chained." |
 | 0:45 | Click **Flex loop (Tier 1)** | "Someone bent the wire. The MCU goes amber and asks 0G whether that's handling or intrusion, with a five-second deadline." |
 | 1:00 | Amber bar drains, chip returns to ARMED | "0G said hold. If it had said nothing, the deadline would have wiped the key. Silence is not consent." |

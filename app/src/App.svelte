@@ -7,6 +7,7 @@
   import Legend from "./components/Legend.svelte";
   import Console from "./components/Console.svelte";
   import { cmd } from "./lib/tauri";
+  import { buildSignatureFrames } from "./lib/intro-frames";
 
   type Step = "boot" | "intro" | "device" | "world" | "legend" | "console";
 
@@ -17,6 +18,10 @@
     reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     ui.event("ui: boot");
     await ui.boot();
+    // Arm the board signature once; Rust plays it the first time the board answers.
+    void cmd<number>("arm_signature", { frames: buildSignatureFrames() })
+      .then((n) => ui.event(`signature armed · ${n} frames`))
+      .catch((e) => ui.event(`signature arm failed: ${e}`));
     const cfg = ui.runtime?.config;
     if (!cfg) {
       step = "device";
@@ -80,9 +85,13 @@
       device={ui.device}
       service={ui.runtime?.service ?? null}
       busy=""
+      udevOk={ui.runtime?.udev_ok ?? true}
       onContinue={afterDevice}
-      onStartBoard={startBoard}
-      onInstallUdev={installUdev}
+      onAction={(kind) => {
+        if (kind === "start_board") void startBoard();
+        else if (kind === "udev") void installUdev();
+        else void ui.boot();
+      }}
     />
   </div>
 {:else if step === "world"}

@@ -89,8 +89,17 @@ a:hover {
 }
 
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.55;
   cursor: not-allowed;
+  color: var(--dim);
+  border-color: var(--border);
+  background: transparent;
+}
+
+.btn[data-kind="primary"]:disabled,
+.btn[data-kind="danger"]:disabled {
+  color: var(--dim);
+  border-color: var(--border);
 }
 
 .btn[data-kind="primary"] {

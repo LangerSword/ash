@@ -1,8 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import gsap from "gsap";
-  import { api, apiBase, ApiError } from "../lib/api";
-  import { buildIntroFrames, INTRO_FPS } from "../lib/intro-frames";
 
   type Props = {
     reduced?: boolean;
@@ -13,19 +11,18 @@
   let { reduced = false, onDone, onBoard }: Props = $props();
 
   let root: HTMLDivElement;
-  let boxPath: SVGPathElement;
-  let lid: SVGGElement;
   let burnRect: SVGRectElement;
-  let burnLine: SVGLineElement;
+  let burnEdge: SVGLineElement;
   let mark: SVGTextElement;
-  let particles: SVGCircleElement[] = [];
+  let embers: SVGCircleElement[] = [];
 
   let finished = false;
   let tl: gsap.core.Timeline | null = null;
 
-  const TARGETS = Array.from({ length: 18 }, (_, i) => ({
-    x: 168 + (i / 17) * 64,
-    y: 176 + (i % 3) * 2,
+  // embers start along the word and fall away from the front
+  const EMBERS = Array.from({ length: 16 }, (_, i) => ({
+    x: 44 + i * 18,
+    y: 96 + (i % 4) * 12,
   }));
 
   function finish(immediate = false) {
@@ -36,11 +33,11 @@
       tl = null;
     }
     if (root) {
-      gsap.set(root.querySelectorAll("[data-particle]"), { opacity: 0 });
-      gsap.set([boxPath, lid], { opacity: 0 });
-      gsap.set(mark, { opacity: 1, letterSpacing: "0.32em", y: 0 });
+      gsap.set(embers, { opacity: 0 });
+      gsap.set(mark, { opacity: 1, y: 0, letterSpacing: "0" });
+      gsap.set(burnRect, { attr: { width: 0 } });
     }
-    window.setTimeout(() => onDone(), immediate ? 0 : 180);
+    window.setTimeout(() => onDone(), immediate ? 0 : 160);
   }
 
   function skip(e: Event) {
@@ -48,81 +45,52 @@
     finish();
   }
 
-  let cancelled = false;
-
   onMount(() => {
-    // Fire the same beats at the board. Wait for the local service if it is still booting.
-    const started = performance.now();
-    const post = () => {
-      if (cancelled) return;
-      if (!apiBase()) {
-        if (performance.now() - started > 2400) {
-          onBoard("Board intro skipped: the local service was still starting.");
-          return;
-        }
-        window.setTimeout(post, 250);
-        return;
-      }
-      api
-        .frame(buildIntroFrames(), INTRO_FPS)
-        .then((r) => onBoard(`board intro · ${r.frames} frames @ ${r.fps} fps`))
-        .catch((e) => {
-          if (e instanceof ApiError && e.status === 404) {
-            onBoard("Board intro unavailable (no /frame on this firmware); shown in-app only.");
-          } else {
-            onBoard(`Board intro not sent: ${e instanceof Error ? e.message : String(e)}`);
-          }
-        });
-    };
-    post();
+    // The board plays the same film; Rust fires it the first time the board answers.
+    onBoard("board signature armed");
 
     if (reduced) {
-      gsap.set([boxPath, lid], { opacity: 0 });
-      gsap.set(particles, { opacity: 0 });
+      gsap.set(embers, { opacity: 0 });
       gsap.fromTo(mark, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" });
       const t = window.setTimeout(() => finish(true), 900);
       return () => window.clearTimeout(t);
     }
 
-    const len = boxPath.getTotalLength();
-    gsap.set(boxPath, { strokeDasharray: len, strokeDashoffset: len });
-    gsap.set(mark, { opacity: 0, letterSpacing: "0.6em" });
-    gsap.set(particles, { opacity: 0 });
+    gsap.set(embers, { opacity: 0 });
+    gsap.set(mark, { opacity: 0, y: 10, letterSpacing: "0.06em" });
     gsap.set(burnRect, { attr: { width: 0 } });
+    gsap.set(burnEdge, { opacity: 0 });
 
-    tl = gsap.timeline({
-      defaults: { ease: "power2.out" },
-      onComplete: () => finish(),
-    });
+    tl = gsap.timeline({ defaults: { ease: "power2.out" }, onComplete: () => finish() });
 
-    tl.to(boxPath, { strokeDashoffset: 0, duration: 0.8, ease: "power2.inOut" }, 0)
-      .to(lid, { rotate: -62, svgOrigin: "120 58", duration: 0.5 }, 0.78)
-      .to(burnRect, { attr: { width: 124 }, duration: 0.95, ease: "none" }, 1.3)
-      .to(burnLine, { attr: { x1: 244, x2: 244 }, duration: 0.95, ease: "none" }, 1.3)
-      .to([boxPath, lid], { opacity: 0.12, duration: 0.35 }, 1.8)
-      .to([boxPath, lid], { opacity: 0, duration: 0.3 }, 2.0)
-      .to(burnLine, { opacity: 0, duration: 0.25 }, 2.2)
-      .to(particles, { opacity: 1, duration: 0.12, stagger: 0.012 }, 1.85)
+    tl.to(mark, { opacity: 1, y: 0, letterSpacing: "0em", duration: 0.75 }, 0)
+      .to({}, { duration: 0.25 }, 0.75)
+      // burn: the front crosses the word left to right
+      .to(burnEdge, { opacity: 0.6, duration: 0.12 }, 0.95)
+      .to(burnRect, { attr: { width: 336 }, duration: 1.35, ease: "none" }, 1.0)
+      .to(burnEdge, { attr: { x1: 356, x2: 356 }, duration: 1.35, ease: "none" }, 1.0)
+      .to(embers, { opacity: 1, duration: 0.1, stagger: { each: 0.07, from: "start" } }, 1.02)
       .to(
-        particles,
+        embers,
         {
-          attr: { cx: (i: number) => TARGETS[i].x, cy: (i: number) => TARGETS[i].y },
-          duration: 0.72,
-          stagger: 0.014,
-          ease: "power2.inOut",
+          attr: { cy: (i: number) => EMBERS[i].y + 70, cx: (i: number) => EMBERS[i].x + 10 },
+          duration: 0.9,
+          stagger: 0.035,
+          ease: "power1.in",
         },
-        1.95,
+        1.1,
       )
-      .to(particles, { opacity: 0, duration: 0.28 }, 2.68)
-      .to(mark, { opacity: 1, letterSpacing: "0.32em", duration: 0.62 }, 2.62)
-      .to({}, { duration: 0.3 }, 3.24);
+      .to(embers, { opacity: 0, duration: 0.35 }, 1.85)
+      .to(burnEdge, { opacity: 0, duration: 0.2 }, 2.3)
+      // reform: the mask retreats, the word comes back right to left
+      .to(burnRect, { attr: { width: 0 }, duration: 0.85, ease: "power2.inOut" }, 2.55)
+      .to({}, { duration: 0.35 }, 3.45);
 
     const keys = (e: KeyboardEvent) => {
       if (e.key === "Escape" || e.key === "Enter" || e.key === " ") finish();
     };
     window.addEventListener("keydown", keys);
     return () => {
-      cancelled = true;
       window.removeEventListener("keydown", keys);
       if (tl) tl.kill();
     };
@@ -140,61 +108,48 @@
 >
   <svg viewBox="0 0 360 220" aria-hidden="true">
     <defs>
-      <mask id="burn">
-        <rect x="0" y="0" width="400" height="220" fill="white" />
-        <rect bind:this={burnRect} x="120" y="40" width="0" height="122" fill="black" />
+      <mask id="ash-burn">
+        <rect x="0" y="0" width="360" height="220" fill="white" />
+        <rect bind:this={burnRect} x="12" y="30" width="0" height="150" fill="black" />
       </mask>
     </defs>
 
-    <g mask="url(#burn)">
-      <path
-        bind:this={boxPath}
-        d="M120 58 H240 V144 H120 Z"
-        fill="none"
-        stroke="#e8e8e8"
-        stroke-width="1"
-      />
-      <g bind:this={lid}>
-        <path d="M120 58 H240" fill="none" stroke="#e8e8e8" stroke-width="1" />
-        <path d="M120 58 L106 48" fill="none" stroke="#5f5f66" stroke-width="1" />
-      </g>
-      <path d="M120 92 H240" fill="none" stroke="#2e2e33" stroke-width="1" stroke-dasharray="2 3" />
+    <g mask="url(#ash-burn)">
+      <text
+        bind:this={mark}
+        x="180"
+        y="132"
+        text-anchor="middle"
+        fill="#efe9dd"
+        font-family="Cormorant, 'EB Garamond', Georgia, serif"
+        font-weight="300"
+        font-size="96"
+      >
+        Ash
+      </text>
     </g>
 
     <line
-      bind:this={burnLine}
-      x1="120"
-      y1="46"
-      x2="120"
-      y2="156"
-      stroke="#ffb020"
-      stroke-width="1.5"
-      opacity="0.9"
+      bind:this={burnEdge}
+      x1="12"
+      y1="34"
+      x2="12"
+      y2="152"
+      stroke="#d4442a"
+      stroke-width="1"
+      opacity="0"
     />
 
-    {#each TARGETS as _, i}
+    {#each EMBERS as e, i}
       <circle
-        bind:this={particles[i]}
-        data-particle
-        cx={120 + (i % 6) * 20}
-        cy={60 + Math.floor(i / 6) * 22}
-        r="1.4"
-        fill="#8a8a8a"
+        bind:this={embers[i]}
+        data-ember
+        cx={e.x}
+        cy={e.y}
+        r="1.3"
+        fill="#d4442a"
       />
     {/each}
-
-    <text
-      bind:this={mark}
-      x="180"
-      y="200"
-      text-anchor="middle"
-      fill="#e8e8e8"
-      font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-      font-size="40"
-      letter-spacing="8"
-    >
-      ASH
-    </text>
   </svg>
 
   <div class="hint">click to skip</div>
@@ -222,12 +177,6 @@
     font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--dim);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hint {
-      opacity: 0.6;
-    }
+    color: var(--muted);
   }
 </style>

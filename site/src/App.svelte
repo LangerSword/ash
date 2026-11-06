@@ -2,6 +2,7 @@
   import HeroBurn from "./components/HeroBurn.svelte";
   import TierScroll from "./components/TierScroll.svelte";
   import Evidence from "./components/Evidence.svelte";
+  import AppScreens from "./components/AppScreens.svelte";
   import UseCase from "./components/UseCase.svelte";
   import Docs from "./components/Docs.svelte";
   import Install from "./components/Install.svelte";
@@ -14,6 +15,7 @@
   <div class="nav-right">
     <nav aria-label="Sections">
       <a href="#how">The seal</a>
+      <a href="#app">App</a>
       <a href="#evidence">Evidence</a>
       <a href="#docs">Docs</a>
       <a href="#install">Install</a>
@@ -44,6 +46,7 @@
 
   <TierScroll />
   <Evidence />
+  <AppScreens />
   <UseCase />
   <Docs />
   <Install />

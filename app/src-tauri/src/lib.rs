@@ -4,6 +4,7 @@ mod service;
 
 use serde::Serialize;
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::{Manager, State};
 
 pub struct AppState {
@@ -12,6 +13,65 @@ pub struct AppState {
     pub service: Mutex<service::ServiceInfo>,
     pub child: Mutex<Option<std::process::Child>>,
     pub board_port: u16,
+    /// Frames for the Ash signature, armed by the UI at boot.
+    pub signature: Mutex<Option<Vec<String>>>,
+    pub signature_sent: Mutex<bool>,
+}
+
+fn play_signature(board_base: &str, frames: &[String]) -> Result<String, String> {
+    let body = serde_json::json!({ "frames": frames, "fps": 14 });
+    ureq::post(&format!("{board_base}/frame"))
+        .timeout(Duration::from_secs(10))
+        .send_json(body)
+        .map_err(|e| format!("frame request failed: {e}"))?
+        .into_string()
+        .map_err(|e| format!("frame response failed: {e}"))
+}
+
+/// Play the signature the first time the board answers in this process.
+/// Rust owns the link, so this cannot be throttled by a hidden webview.
+fn maybe_play_signature(state: &AppState) {
+    let dev = match state.device.lock() {
+        Ok(d) => d.clone(),
+        Err(_) => return,
+    };
+    if dev.state != "ready" || dev.board_base.is_empty() {
+        return;
+    }
+    let mut sent = match state.signature_sent.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    if *sent {
+        return;
+    }
+    let frames = match state.signature.lock() {
+        Ok(g) => g.clone(),
+        Err(_) => None,
+    };
+    let Some(frames) = frames else { return };
+    match play_signature(&dev.board_base, &frames) {
+        Ok(_) => {
+            *sent = true;
+            config::log_line(&format!(
+                "signature: {} frames played on {}",
+                frames.len(),
+                if dev.serial.is_empty() { "the board" } else { &dev.serial }
+            ));
+        }
+        Err(e) => config::log_line(&format!("signature: not played · {e}")),
+    }
+}
+
+#[tauri::command]
+fn arm_signature(state: State<'_, AppState>, frames: Vec<String>) -> Result<usize, String> {
+    let n = frames.len();
+    {
+        let mut slot = state.signature.lock().map_err(|e| e.to_string())?;
+        *slot = Some(frames);
+    }
+    maybe_play_signature(&state);
+    Ok(n)
 }
 
 #[derive(Serialize)]
@@ -84,6 +144,8 @@ pub fn run() {
         service: Mutex::new(service::ServiceInfo::default()),
         child: Mutex::new(None),
         board_port,
+        signature: Mutex::new(None),
+        signature_sent: Mutex::new(false),
     };
 
     let app = tauri::Builder::default()
@@ -93,18 +155,47 @@ pub fn run() {
             start_board_app,
             install_udev,
             save_config,
-            append_log
+            append_log,
+            arm_signature
         ])
         .setup(move |app| {
             let handle = app.handle().clone();
             let serial = cfg.serial.clone();
             std::thread::spawn(move || {
                 let state = handle.state::<AppState>();
+                let mut forwarded_hits = 0u32;
+                let mut last_autostart = 0u64;
+                let mut last_state = String::new();
                 loop {
                     let snap = device::poll(&serial, state.board_port);
+
+                    // A board whose app is not up yet is a dead end for the user.
+                    // Start it once the condition has held for two polls, then cool down.
+                    if snap.state == "forwarded" {
+                        forwarded_hits += 1;
+                    } else {
+                        forwarded_hits = 0;
+                    }
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    if forwarded_hits >= 2 && now.saturating_sub(last_autostart) > 30 {
+                        last_autostart = now;
+                        match device::start_board_app(&snap.serial) {
+                            Ok(out) => config::log_line(&format!("auto: board app start · {out}")),
+                            Err(e) => config::log_line(&format!("auto: board app start failed · {e}")),
+                        }
+                    }
+
+                    if snap.state != last_state {
+                        config::log_line(&format!("device: {last_state} -> {}", snap.state));
+                        last_state = snap.state.clone();
+                    }
                     if let Ok(mut slot) = state.device.lock() {
                         *slot = snap;
                     }
+                    maybe_play_signature(&state);
                     std::thread::sleep(std::time::Duration::from_secs(2));
                 }
             });

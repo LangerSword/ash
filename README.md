@@ -105,6 +105,8 @@ AppImage.
 ```
 
 It attaches to a running `device/demo_api.py` on :8080, or spawns its own bundled copy on a free port.
+On first contact with the board it plays the Ash signature on the 13×8 matrix, and it starts a stopped
+board app by itself.
 `app/README.md` documents the split between the Rust device link, the Python service and the UI, and
 the endpoints added for it (`POST /frame`, `GET /ledger/verify`, `evidence.mock|world`).
 

@@ -231,9 +231,10 @@ class Ui {
       if (out.status === 402) {
         const body = out.data as { accepts?: Array<Record<string, unknown>> };
         const a = body?.accepts?.[0] ?? {};
-        const amount = Number(a.amount ?? 0) / 1e6;
+        const hbar = String(a.asset ?? "") === "0.0.0";
+        const amount = Number(a.amount ?? 0) / (hbar ? 1e8 : 1e6);
         this.failure = {
-          cause: `Payment required: ${amount} ${a.asset ?? "USDC"} to ${a.payTo ?? "the payee"} on ${a.network ?? "hedera"}.`,
+          cause: `Payment required: ${amount} ${hbar ? "HBAR" : "USDC"} to ${a.payTo ?? "the payee"} on ${a.network ?? "hedera"}.`,
           action: "The app does not pay automatically. The agent's key settles it server-side.",
         };
         return;

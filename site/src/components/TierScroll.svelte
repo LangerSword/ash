@@ -9,7 +9,7 @@
       k: "01",
       t: "Cut",
       body: "The loop opens. No network, no host, no model. The MCU erases the key and reads the page back.",
-      facts: ["240 µs erase", "0 network calls", "TAMPERED, terminal"],
+      facts: ["874 µs erase, 1.32 ms with read-back", "0 network calls", "TAMPERED, terminal"],
     },
     {
       k: "02",
