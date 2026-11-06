@@ -1,5 +1,6 @@
 import "./styles/tokens.css";
 import "./styles/app.css";
+import "./styles/site.css";
 import { mount } from "svelte";
 import App from "./App.svelte";
 

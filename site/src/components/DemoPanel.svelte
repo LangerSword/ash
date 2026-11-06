@@ -85,11 +85,11 @@
   const last0g = $derived.by(() => {
     const rec = [...ui.ledger].reverse().find((r) => (r["0g"] as { request_id?: string })?.request_id);
     const g = rec?.["0g"] as { request_id?: string } | undefined;
-    return g?.request_id ? g.request_id.slice(0, 18) + "…" : "—";
+    return g?.request_id ? g.request_id.slice(0, 18) + "…" : "n/a";
   });
 
-  const master = $derived(ui.status ? (ui.status.master ? "present" : "erased") : "—");
-  const loopState = $derived(ui.status ? (ui.status.loop ? "open" : "closed") : "—");
+  const master = $derived(ui.status ? (ui.status.master ? "present" : "erased") : "n/a");
+  const loopState = $derived(ui.status ? (ui.status.loop ? "open" : "closed") : "n/a");
   const deadline = $derived(ui.evidence ? `${ui.evidence.deadline_ms} ms` : "5 000 ms");
 
   function ago(at: number): string {
@@ -139,7 +139,7 @@
 
       <dl class="state-list">
         <dt>state</dt><dd>{stateLabel()}</dd>
-        <dt>counter</dt><dd>{ui.status?.counter ?? "—"}</dd>
+        <dt>counter</dt><dd>{ui.status?.counter ?? "n/a"}</dd>
         <dt>master</dt><dd>{master}</dd>
         <dt>loop</dt><dd>{loopState}</dd>
         <dt>deadline</dt><dd>{deadline}</dd>

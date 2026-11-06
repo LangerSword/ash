@@ -1,13 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Hero from "./components/Hero.svelte";
-  import Section from "./components/Section.svelte";
-  import TierStack from "./components/TierStack.svelte";
+  import BurnHero from "./components/BurnHero.svelte";
+  import TierScroll from "./components/TierScroll.svelte";
   import DemoPanel from "./components/DemoPanel.svelte";
-  import Evidence from "./components/Evidence.svelte";
-  import Disclosures from "./components/Disclosures.svelte";
-  import WalletPanel from "./components/WalletPanel.svelte";
-  import Footer from "./components/Footer.svelte";
+  import UseCase from "./components/UseCase.svelte";
+  import Docs from "./components/Docs.svelte";
+  import Install from "./components/Install.svelte";
   import { start, stop } from "./lib/store.svelte";
 
   onMount(() => {
@@ -18,64 +16,71 @@
 
 <a class="skip" href="#demo">Skip to the live seal</a>
 
-<div class="shell">
-  <Hero />
+<header class="nav">
+  <a class="mark" href="#top">ASH</a>
+  <nav aria-label="Sections">
+    <a href="#how">How it works</a>
+    <a href="#demo">Live seal</a>
+    <a href="#docs">Docs</a>
+    <a href="#install">Install</a>
+  </nav>
+  <a class="gh" href="https://github.com/LangerSword/ash" rel="noopener" aria-label="Repository on GitHub">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path
+        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+      />
+    </svg>
+  </a>
+</header>
 
-  <main>
-    <Section title="The problem">
-      <div class="prose">
-        <p>
-          Confidential material still moves in boxes. Discovery files, prototypes, samples, evidence.
-          The only protection is a plastic seal and a signature.
-        </p>
-        <p>
-          A plastic seal proves nothing. A server-side delete can be paused, rolled back, or subpoenaed.
-        </p>
-        <p>
-          <strong>Ash</strong> puts the detector and the key in the same offline computer, inside the seal.
-          Break the loop and the key is gone. Bend it, and a model decides whether that was handling or
-          intrusion — against a deadline, where silence means wipe.
-        </p>
-      </div>
-      <p class="caption">
-        NIST SP 800-88r2 recognises cryptographic erase · ISO 17712 is the mechanical seal it upgrades ·
-        DPDP Act 2023 s.8(7) requires erasure
+<main id="top">
+  <section class="masthead">
+    <div class="masthead-copy">
+      <p class="kicker mono">tamper-responsive seal · arduino uno q</p>
+      <h1>Open it the<br />wrong way.<br /><em>It becomes ash.</em></h1>
+      <p class="sub">
+        A seal for confidential shipments. Break the loop and the key dies in the chip before anyone
+        reads a byte.
       </p>
-    </Section>
-
-    <Section title="How it works">
-      <TierStack />
-    </Section>
-
-    <Section id="demo" title="Live seal">
-      <DemoPanel />
-      <p class="caption">
-        The panel talks to the board over USB. If the board is absent it says so and disables the controls;
-        nothing on this page invents a device state.
-      </p>
-    </Section>
-
-    <Section title="Evidence">
-      <Evidence />
-    </Section>
-
-    <Section title="What breaks without 0G">
-      <div class="prose">
-        <p>
-          Nothing detects the ambiguous case. The seal falls back to a hard rule: any interruption wipes.
-          Safe, and unusable for normal handling.
-        </p>
+      <div class="actions">
+        <a class="btn" data-kind="primary" href="#install">Install the app</a>
+        <a class="btn" href="#how">How it decides</a>
       </div>
-    </Section>
+    </div>
+    <div class="masthead-visual">
+      <BurnHero />
+      <p class="caption mono">try it · the box on your screen is not a video</p>
+    </div>
+  </section>
 
-    <Section title="Disclosures">
-      <Disclosures />
-    </Section>
+  <TierScroll />
 
-    <Section title="Wallets">
-      <WalletPanel />
-    </Section>
-  </main>
+  <section class="live" id="demo">
+    <div class="live-head">
+      <h2>The seal, live.</h2>
+      <p>
+        This panel talks to the board on the desk over its own API. Seal, bend the loop, cut it, and
+        watch the state change. If the board is offline it says so.
+      </p>
+    </div>
+    <DemoPanel />
+  </section>
 
-  <Footer />
-</div>
+  <UseCase />
+  <Docs />
+  <Install />
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <div>
+      <span class="mark">ASH</span>
+      <p>Built at ETHGlobal Mumbai 2026. One board, one loop, one key.</p>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/LangerSword/ash" rel="noopener">Source</a>
+      <a href="#docs">Limits</a>
+      <a href="#install">Install</a>
+    </div>
+  </div>
+</footer>
