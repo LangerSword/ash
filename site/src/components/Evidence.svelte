@@ -37,6 +37,37 @@
 }`;
   let challengeText = $state(challenge);
 
+  let logEl: HTMLOListElement;
+
+  onMount(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    let killed = false;
+    let ctx: { revert: () => void } | null = null;
+    void (async () => {
+      const gsapMod = await import("gsap");
+      const stMod = await import("gsap/ScrollTrigger");
+      if (killed) return;
+      const gsap = gsapMod.gsap ?? gsapMod.default;
+      const ScrollTrigger = stMod.ScrollTrigger ?? stMod.default;
+      gsap.registerPlugin(ScrollTrigger);
+      ctx = gsap.context(() => {
+        gsap.from(logEl.querySelectorAll("li"), {
+          opacity: 0,
+          x: -10,
+          duration: 0.5,
+          ease: "power2.out",
+          stagger: 0.07,
+          scrollTrigger: { trigger: logEl, start: "top 84%", once: true },
+        });
+      }, logEl);
+    })();
+    return () => {
+      killed = true;
+      ctx?.revert();
+    };
+  });
+
   onMount(async () => {
     try {
       const r = await fetch("https://api.langersword.in/attestation/C-001");
@@ -89,7 +120,7 @@
         <span class="mono">episode · C-001</span>
         <span class="mono">hash chained</span>
       </div>
-      <ol>
+      <ol bind:this={logEl}>
         {#each events as ev}
           <li>
             <span class="time mono">{ev.t}</span>

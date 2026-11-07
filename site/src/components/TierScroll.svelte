@@ -28,8 +28,9 @@
   onMount(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
-    let ctx: { revert: () => void } | null = null;
+
     let killed = false;
+    let mm: { revert: () => void } | null = null;
 
     void (async () => {
       const gsapMod = await import("gsap");
@@ -39,7 +40,10 @@
       const ScrollTrigger = stMod.ScrollTrigger ?? stMod.default;
       gsap.registerPlugin(ScrollTrigger);
 
-      ctx = gsap.context(() => {
+      mm = gsap.matchMedia();
+
+      // Desktop: pin the section and scrub through the three responses.
+      mm.add("(min-width: 861px)", () => {
         gsap.set(acts.slice(1), { autoAlpha: 0, y: 40 });
         const tl = gsap.timeline({
           scrollTrigger: {
@@ -56,12 +60,32 @@
           tl.to(acts[i - 1], { autoAlpha: 0, y: -40, duration: 0.6 }, i - 0.1)
             .to(el, { autoAlpha: 1, y: 0, duration: 0.6 }, i - 0.1);
         });
-      }, wrap);
+        return () => {
+          gsap.set(acts, { clearProps: "all" });
+        };
+      });
+
+      // Mobile: no pin, no scrub. Each response enters once as it reaches the viewport.
+      mm.add("(max-width: 860px)", () => {
+        gsap.set(acts, { autoAlpha: 0, y: 26 });
+        acts.forEach((el) => {
+          gsap.to(el, {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: "power2.out",
+            scrollTrigger: { trigger: el, start: "top 86%", once: true },
+          });
+        });
+        return () => {
+          gsap.set(acts, { clearProps: "all" });
+        };
+      });
     })();
 
     return () => {
       killed = true;
-      ctx?.revert();
+      mm?.revert();
     };
   });
 </script>
@@ -198,10 +222,7 @@
       display: block;
     }
     .act {
-      position: static !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-      transform: none !important;
+      position: static;
       margin-top: 40px;
     }
     .rule {

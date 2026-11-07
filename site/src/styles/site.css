@@ -431,3 +431,30 @@ h3 {
     opacity: 0.035;
   }
 }
+
+/* ---- reading progress: one hairline, below the nav ---- */
+.progress {
+  position: fixed;
+  top: 61px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--ember);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 41;
+}
+
+@media (max-width: 900px) {
+  .progress {
+    top: 55px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress {
+    display: none;
+  }
+}

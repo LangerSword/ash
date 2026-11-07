@@ -11,8 +11,9 @@
       svg.classList.add("drawn", "broken");
       return;
     }
+
     let killed = false;
-    let ctx: { revert: () => void } | null = null;
+    let mm: { revert: () => void } | null = null;
 
     void (async () => {
       const gsapMod = await import("gsap");
@@ -22,30 +23,49 @@
       const ScrollTrigger = stMod.ScrollTrigger ?? stMod.default;
       gsap.registerPlugin(ScrollTrigger);
 
-      ctx = gsap.context(() => {
-        const line = svg.querySelector<SVGPathElement>("#wire")!;
-        const len = line.getTotalLength();
-        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
+      const line = svg.querySelector<SVGPathElement>("#wire")!;
+      const len = line.getTotalLength();
+      const notes = gsap.utils.toArray<HTMLElement>(".loop-note");
 
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: wrap,
-            start: "top 75%",
-            end: "bottom 60%",
-            scrub: 0.6,
-            onUpdate: (self) => {
-              svg.classList.toggle("broken", self.progress > 0.68);
+      mm = gsap.matchMedia();
+
+      // Desktop: the wire draws with the scroll and breaks near the end.
+      mm.add("(min-width: 861px)", () => {
+        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
+        gsap.set(notes, { opacity: 0, y: 10 });
+
+        gsap
+          .timeline({
+            scrollTrigger: {
+              trigger: wrap,
+              start: "top 75%",
+              end: "bottom 60%",
+              scrub: 0.6,
+              onUpdate: (self) => svg.classList.toggle("broken", self.progress > 0.68),
             },
-          },
-        });
-        tl.to(line, { strokeDashoffset: 0, duration: 1, ease: "none" }, 0)
-          .to(".loop-note", { opacity: 1, y: 0, duration: 0.3, stagger: 0.12 }, 0.55);
-      }, wrap);
+          })
+          .to(line, { strokeDashoffset: 0, duration: 1, ease: "none" }, 0)
+          .to(notes, { opacity: 1, y: 0, duration: 0.3, stagger: 0.12 }, 0.55);
+      });
+
+      // Mobile: the section is short, so play it once when it arrives.
+      mm.add("(max-width: 860px)", () => {
+        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
+        gsap.set(notes, { opacity: 0, y: 10 });
+
+        gsap
+          .timeline({
+            scrollTrigger: { trigger: wrap, start: "top 78%", once: true },
+          })
+          .to(line, { strokeDashoffset: 0, duration: 1.3, ease: "power2.inOut" })
+          .call(() => svg.classList.add("broken"))
+          .to(notes, { opacity: 1, y: 0, duration: 0.4, stagger: 0.1 }, "-=0.2");
+      });
     })();
 
     return () => {
       killed = true;
-      ctx?.revert();
+      mm?.revert();
     };
   });
 </script>
@@ -143,8 +163,7 @@
   }
 
   .loop-note {
-    opacity: 0;
-    transform: translateY(10px);
+    opacity: 1;
   }
 
   .mono {
@@ -259,10 +278,5 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .loop-note {
-      opacity: 1;
-      transform: none;
-    }
-  }
+
 </style>
