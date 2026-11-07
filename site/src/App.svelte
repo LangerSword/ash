@@ -2,7 +2,6 @@
   import { onMount } from "svelte";
   import HeroBurn from "./components/HeroBurn.svelte";
   import LoopDiagram from "./components/LoopDiagram.svelte";
-  import { words } from "./lib/words";
   import TierScroll from "./components/TierScroll.svelte";
   import Evidence from "./components/Evidence.svelte";
   import AppScreens from "./components/AppScreens.svelte";
@@ -12,39 +11,47 @@
 
   onMount(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!reduce) {
-      let killed = false;
-      let ctx: { revert: () => void } | null = null;
-      void (async () => {
-        const gsapMod = await import("gsap");
-        const stMod = await import("gsap/ScrollTrigger");
-        if (killed) return;
-        const gsap = gsapMod.gsap ?? gsapMod.default;
-        const ScrollTrigger = stMod.ScrollTrigger ?? stMod.default;
-        gsap.registerPlugin(ScrollTrigger);
-        ctx = gsap.context(() => {
-          gsap.fromTo(
-            ".progress",
-            { scaleX: 0 },
-            {
-              scaleX: 1,
-              ease: "none",
-              scrollTrigger: { trigger: document.body, start: "top top", end: "bottom bottom", scrub: 0.3 },
-            },
-          );
-        });
-      })();
-      window.addEventListener("pagehide", () => {
-        killed = true;
-        ctx?.revert();
-      });
-    }
+    if (reduce) return;
 
-    // Word-by-word reveal for plain headings; headings with markup keep their own layout.
-    document.querySelectorAll<HTMLElement>("main h2").forEach((h) => {
-      if (h.querySelector("br") || h.closest("#loop")) return;
-      words(h);
-    });
+    let killed = false;
+    const splits: { revert: () => void }[] = [];
+
+    void (async () => {
+      const gsapMod = await import("gsap");
+      const stMod = await import("gsap/ScrollTrigger");
+      const splitMod = await import("gsap/SplitText");
+      if (killed) return;
+
+      const gsap = gsapMod.gsap ?? gsapMod.default;
+      const ScrollTrigger = stMod.ScrollTrigger ?? stMod.default;
+      const SplitText = splitMod.SplitText ?? splitMod.default;
+      gsap.registerPlugin(ScrollTrigger, SplitText);
+
+      document.querySelectorAll<HTMLElement>("main h2").forEach((h) => {
+        // Headings with a <br> keep their own line breaks.
+        if (h.querySelector("br")) return;
+        const split = SplitText.create(h, {
+          type: "lines,words",
+          mask: "lines",
+          autoSplit: true,
+          onSplit(self: { words: Element[] }) {
+            return gsap.from(self.words, {
+              yPercent: 120,
+              duration: 0.8,
+              ease: "power3.out",
+              stagger: 0.04,
+              scrollTrigger: { trigger: h, start: "top 88%", once: true },
+            });
+          },
+        });
+        splits.push(split);
+      });
+    })();
+
+    return () => {
+      killed = true;
+      splits.forEach((s) => s.revert());
+    };
   });
 </script>
 
@@ -107,5 +114,4 @@
   </div>
 </footer>
 
-<div class="progress" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>

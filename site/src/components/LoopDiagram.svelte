@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { words } from "../lib/words";
 
   let wrap: HTMLDivElement;
   let svg: SVGSVGElement;
@@ -18,48 +17,86 @@
     void (async () => {
       const gsapMod = await import("gsap");
       const stMod = await import("gsap/ScrollTrigger");
+      const drawMod = await import("gsap/DrawSVGPlugin");
+      const pathMod = await import("gsap/MotionPathPlugin");
+      const scrambleMod = await import("gsap/ScrambleTextPlugin");
       if (killed) return;
+
       const gsap = gsapMod.gsap ?? gsapMod.default;
       const ScrollTrigger = stMod.ScrollTrigger ?? stMod.default;
-      gsap.registerPlugin(ScrollTrigger);
+      const DrawSVGPlugin = drawMod.DrawSVGPlugin ?? drawMod.default;
+      const MotionPathPlugin = pathMod.MotionPathPlugin ?? pathMod.default;
+      const ScrambleTextPlugin = scrambleMod.ScrambleTextPlugin ?? scrambleMod.default;
+      gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin, MotionPathPlugin, ScrambleTextPlugin);
 
       const line = svg.querySelector<SVGPathElement>("#wire")!;
-      const len = line.getTotalLength();
+      const ember = svg.querySelector<SVGCircleElement>("#ember")!;
       const notes = gsap.utils.toArray<HTMLElement>(".loop-note");
+      const values = gsap.utils.toArray<HTMLElement>(".loop-note b");
+      const finalText = values.map((el) => el.textContent ?? "");
 
       mm = gsap.matchMedia();
 
-      // Desktop: the wire draws with the scroll and breaks near the end.
-      mm.add("(min-width: 861px)", () => {
-        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
+      const build = (scrub: boolean, vars: ScrollTrigger.Vars) => {
+        gsap.set(line, { drawSVG: "0%" });
+        gsap.set(ember, { opacity: 0 });
         gsap.set(notes, { opacity: 0, y: 10 });
 
-        gsap
-          .timeline({
-            scrollTrigger: {
-              trigger: wrap,
-              start: "top 75%",
-              end: "bottom 60%",
-              scrub: 0.6,
-              onUpdate: (self) => svg.classList.toggle("broken", self.progress > 0.68),
+        const tl = gsap.timeline({
+          scrollTrigger: scrub
+            ? {
+                trigger: wrap,
+                start: "top 75%",
+                end: "bottom 60%",
+                scrub: 0.6,
+                onUpdate: (self) => svg.classList.toggle("broken", self.progress > 0.68),
+              }
+            : vars,
+        });
+
+        tl.to(line, { drawSVG: "100%", duration: 1.1, ease: "none" }, 0)
+          .to(
+            ember,
+            {
+              opacity: 1,
+              motionPath: {
+                path: "#wire",
+                align: "#wire",
+                alignOrigin: [0.5, 0.5],
+                start: 0,
+                end: 0.96,
+              },
+              duration: 1.05,
+              ease: "none",
             },
-          })
-          .to(line, { strokeDashoffset: 0, duration: 1, ease: "none" }, 0)
-          .to(notes, { opacity: 1, y: 0, duration: 0.3, stagger: 0.12 }, 0.55);
+            0,
+          )
+          .to(ember, { opacity: 0, duration: 0.1 }, 1.05)
+          .to(notes, { opacity: 1, y: 0, duration: 0.3, stagger: 0.1 }, 0.6);
+
+        values.forEach((el, i) => {
+          tl.to(
+            el,
+            {
+              duration: 0.9,
+              scrambleText: { text: finalText[i], chars: "0123456789µms.", speed: 0.5 },
+              ease: "none",
+            },
+            0.75 + i * 0.12,
+          );
+        });
+
+        if (!scrub) tl.eventCallback("onComplete", () => svg.classList.add("broken"));
+      };
+
+      mm.add("(min-width: 861px)", () => {
+        build(true, {});
+        return () => gsap.set([line, ember, ...notes], { clearProps: "all" });
       });
 
-      // Mobile: the section is short, so play it once when it arrives.
       mm.add("(max-width: 860px)", () => {
-        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
-        gsap.set(notes, { opacity: 0, y: 10 });
-
-        gsap
-          .timeline({
-            scrollTrigger: { trigger: wrap, start: "top 78%", once: true },
-          })
-          .to(line, { strokeDashoffset: 0, duration: 1.3, ease: "power2.inOut" })
-          .call(() => svg.classList.add("broken"))
-          .to(notes, { opacity: 1, y: 0, duration: 0.4, stagger: 0.1 }, "-=0.2");
+        build(false, { trigger: wrap, start: "top 78%", once: true });
+        return () => gsap.set([line, ember, ...notes], { clearProps: "all" });
       });
     })();
 
@@ -72,7 +109,7 @@
 
 <section class="loop" id="loop" bind:this={wrap}>
   <div class="copy">
-    <h2 use:words>One wire. It is the whole sensor.</h2>
+    <h2>One wire. It is the whole sensor.</h2>
     <p>
       The loop runs through the lid and into the board. The firmware samples it every millisecond. A
       break is not a log entry. It is the end of the key.
@@ -103,6 +140,8 @@
         class="wire"
       />
 
+      <circle id="ember" cx="0" cy="0" r="3.2" class="ember" />
+
       <g class="break">
         <circle cx="300" cy="238" r="4.5" class="spark" />
         <circle cx="300" cy="238" r="13" class="spark-ring" />
@@ -128,14 +167,12 @@
     align-items: center;
     border-top: 1px solid var(--border);
   }
-
   h2 {
     font-size: clamp(30px, 4vw, 54px);
     line-height: 1.02;
     letter-spacing: -0.02em;
     margin: 0 0 18px;
   }
-
   .copy p {
     margin: 0 0 32px;
     color: var(--muted);
@@ -143,14 +180,12 @@
     line-height: 1.6;
     max-width: 42ch;
   }
-
   ul {
     list-style: none;
     margin: 0;
     padding: 0;
     border-top: 1px solid var(--border);
   }
-
   li {
     display: grid;
     grid-template-columns: 64px 96px 1fr;
@@ -161,11 +196,6 @@
     font-size: 13px;
     color: var(--muted);
   }
-
-  .loop-note {
-    opacity: 1;
-  }
-
   .mono {
     font-family: var(--mono);
     font-size: 10px;
@@ -173,51 +203,46 @@
     text-transform: uppercase;
     color: var(--dim);
   }
-
   li b {
     font-family: var(--mono);
     font-weight: 400;
     font-size: 12.5px;
     color: var(--text);
+    white-space: nowrap;
   }
-
   .stage {
     position: relative;
   }
-
   svg {
     width: 100%;
     height: auto;
     display: block;
   }
-
   .case rect,
   .case .seam {
     fill: none;
     stroke: var(--border-strong);
     stroke-width: 1.1;
   }
-
   .case .seam {
     stroke-dasharray: 3 4;
   }
-
   .pin {
     fill: var(--dim);
   }
-
   .mcu {
     fill: var(--surface);
     stroke: var(--border-strong);
     stroke-width: 1.1;
   }
-
   .wire {
     stroke: var(--text);
     stroke-width: 1.4;
     stroke-linecap: square;
   }
-
+  .ember {
+    fill: var(--ember);
+  }
   .label {
     fill: var(--dim);
     font-family: var(--mono);
@@ -225,46 +250,37 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
-
   .label.hot {
     fill: var(--ember);
   }
-
   .break {
     opacity: 0;
     transition: opacity 160ms linear;
   }
-
   .spark {
     fill: var(--ember);
   }
-
   .spark-ring {
     fill: none;
     stroke: var(--ember);
     stroke-width: 1;
     opacity: 0.4;
   }
-
   svg.broken .break {
     opacity: 1;
   }
-
   svg.broken .wire {
     stroke: var(--muted);
   }
-
   svg.broken .mcu {
     stroke: var(--ember);
   }
-
   .caption {
     position: absolute;
     right: 0;
     bottom: -18px;
     margin: 0;
   }
-
   @media (max-width: 900px) {
     .loop {
       grid-template-columns: 1fr;
@@ -277,6 +293,4 @@
       grid-template-columns: 56px 84px 1fr;
     }
   }
-
-
 </style>
