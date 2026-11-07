@@ -1,11 +1,22 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import HeroBurn from "./components/HeroBurn.svelte";
+  import LoopDiagram from "./components/LoopDiagram.svelte";
+  import { words } from "./lib/words";
   import TierScroll from "./components/TierScroll.svelte";
   import Evidence from "./components/Evidence.svelte";
   import AppScreens from "./components/AppScreens.svelte";
   import UseCase from "./components/UseCase.svelte";
   import Docs from "./components/Docs.svelte";
   import Install from "./components/Install.svelte";
+
+  onMount(() => {
+    // Word-by-word reveal for plain headings; headings with markup keep their own layout.
+    document.querySelectorAll<HTMLElement>("main h2").forEach((h) => {
+      if (h.querySelector("br") || h.closest("#loop")) return;
+      words(h);
+    });
+  });
 </script>
 
 <a class="skip" href="#how">Skip to the seal</a>
@@ -44,6 +55,7 @@
     <p class="hero-caption mono">burns and returns</p>
   </section>
 
+  <LoopDiagram />
   <TierScroll />
   <Evidence />
   <AppScreens />
@@ -65,3 +77,5 @@
     </div>
   </div>
 </footer>
+
+<div class="grain" aria-hidden="true"></div>
