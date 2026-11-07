@@ -147,9 +147,9 @@
     text-align: left;
     font-weight: 400;
     color: var(--dim);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 7px 16px;
+    padding: 8px 16px;
     border-bottom: 1px solid var(--border);
   }
 

@@ -14,7 +14,8 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--sans);
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -45,8 +46,12 @@ a:hover {
   border-color: var(--signal);
 }
 
-.num {
-  font-variant-numeric: tabular-nums;
+.num,
+.kv,
+table,
+pre,
+.matrix-meta {
+  font-family: var(--mono);
 }
 
 .mono-dim {
@@ -61,6 +66,7 @@ a:hover {
 }
 
 .btn {
+  font-family: var(--sans);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -103,8 +109,15 @@ a:hover {
 }
 
 .btn[data-kind="primary"] {
-  border-color: #2c5b33;
-  color: var(--signal);
+  border-color: var(--text);
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.btn[data-kind="primary"]:hover:not(:disabled) {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
 }
 
 .btn[data-kind="primary"]:hover:not(:disabled) {
@@ -112,8 +125,8 @@ a:hover {
 }
 
 .btn[data-kind="danger"] {
-  color: var(--alert);
-  border-color: #4a2626;
+  color: var(--ember);
+  border-color: #4a2418;
 }
 
 .btn[data-kind="danger"]:hover:not(:disabled) {
@@ -146,8 +159,9 @@ a:hover {
 }
 
 .label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-family: var(--sans);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--dim);
 }

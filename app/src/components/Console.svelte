@@ -29,6 +29,21 @@
             : "OFFLINE",
   );
   const conn = $derived(connection(ui.device, ui.runtime?.service ?? null, ui.runtime?.udev_ok ?? true));
+
+  const heroWord = $derived(
+    mode === "armed" ? "Sealed" : mode === "amber" ? "Deciding" : mode === "tampered" ? "Destroyed" : mode === "unsealed" ? "Open" : "Offline",
+  );
+  const heroLine = $derived(
+    mode === "armed"
+      ? "the key is in the chip · the loop is intact"
+      : mode === "amber"
+        ? "someone touched the loop · 0G has seconds to answer"
+        : mode === "tampered"
+          ? "the key is gone · the payload is noise now"
+          : mode === "unsealed"
+            ? "released to a verified human"
+            : "no board on USB",
+  );
   const deadline = $derived(ui.evidence?.deadline_ms ?? 5000);
   const last0g = $derived(ui.last0g);
 
@@ -94,7 +109,7 @@
 <div class="console">
   <header>
     <div class="brand">
-      <span class="wordmark">ASH</span>
+      <span class="wordmark">Ash</span>
       <span class="meta">tamper-responsive seal</span>
     </div>
 
@@ -117,25 +132,44 @@
 
   <div class="mid">
     <section class="mirror">
+      <div class="hero" data-state={mode}>
+        <span class="hero-word">{heroWord}</span>
+        <span class="hero-line">{heroLine}</span>
+        <div class="assure">
+          <span class="assure-chip" data-ok={ui.verify ? (ui.verify.ok ? 1 : 0) : -1}>
+            {ui.verify ? (ui.verify.ok ? `chain verified · ${ui.verify.records}` : `chain broken · ${ui.verify.detail}`) : "chain unchecked"}
+          </span>
+          <span class="assure-chip" data-ok={ui.status?.master ? 1 : 0}>key hardware-bound</span>
+          <span class="assure-chip" data-ok={1}>release needs a human</span>
+        </div>
+      </div>
+
       <Matrix mode={mode} {amberSince} deadlineMs={deadline} />
+
       <dl class="kv">
-        <dt>seal</dt>
-        <dd>{chip}</dd>
         <dt>key</dt>
         <dd>{ui.status ? (ui.status.master ? "in the chip" : "destroyed") : "—"}</dd>
         <dt>loop</dt>
         <dd>{ui.status ? (ui.status.loop ? "open" : "closed") : "—"}</dd>
         <dt>opens</dt>
         <dd>{ui.status?.counter ?? "—"}</dd>
-        <dt>deadline</dt>
-        <dd>{deadline} ms</dd>
-        <dt>last decision</dt>
-        <dd title={last0g?.id ?? ""}>
-          {last0g ? `${last0g.id.slice(0, 14)}… · 0G` : "—"}
-        </dd>
         <dt>last record</dt>
         <dd class="hash" title={ui.ledger.at(-1)?.hash ?? ""}>{ui.lastHash}</dd>
       </dl>
+
+      <details class="more">
+        <summary>Details</summary>
+        <dl class="kv">
+          <dt>deadline</dt>
+          <dd>{deadline} ms</dd>
+          <dt>last decision</dt>
+          <dd title={last0g?.id ?? ""}>{last0g ? `${last0g.id.slice(0, 14)}… · 0G` : "—"}</dd>
+          <dt>service</dt>
+          <dd>{ui.runtime?.service.mode ?? "—"}</dd>
+          <dt>build</dt>
+          <dd>{ui.runtime?.version ?? "—"}</dd>
+        </dl>
+      </details>
 
       {#if !conn.ready}
         <Connection {conn} busy={boardBusy} onAction={onConnAction} compact />
@@ -160,12 +194,12 @@
           />
           <button
             class="btn"
-            data-kind="primary"
-            disabled={!canAct || !container.trim()}
+            data-kind={sealed ? "plain" : "primary"}
+            disabled={!canAct || !container.trim() || sealed}
             data-busy={ui.busy === "seal" ? 1 : 0}
             onclick={() => ui.seal(container.trim(), owner)}
           >
-            Seal container
+            {sealed ? "Already sealed" : "Seal container"}
           </button>
         </div>
       </div>
@@ -178,21 +212,22 @@
         <div class="row">
           <button
             class="btn"
+            data-kind={sealed ? "primary" : "plain"}
             disabled={!canAct || !container.trim()}
             data-busy={ui.busy === "unseal" ? 1 : 0}
             onclick={() => (worldOpen = true)}
           >
             Unseal with World ID
           </button>
-          <span class="note">{sealed ? "seal found" : "no seal yet"}</span>
+          <span class="note">{sealed ? `${container} is sealed` : "nothing sealed yet"}</span>
         </div>
       </div>
 
-      <div class="group">
-        <div class="group-head">
+      <details class="group attacks">
+        <summary>
           <span class="label">What can happen to it</span>
-          <span class="note">on the real board, in front of you</span>
-        </div>
+          <span class="note">on the real board · demo rig</span>
+        </summary>
         <div class="row">
           <button
             class="btn"
@@ -222,7 +257,7 @@
             Reset the seal
           </button>
         </div>
-      </div>
+      </details>
 
       {#if ui.failure}
         <div class="msg" data-kind="err" role="alert">
@@ -244,12 +279,12 @@
         </div>
       {/if}
 
-      <div class="log">
-        <span class="label">Activity</span>
+      <details class="log">
+        <summary>Activity log</summary>
         <pre class="scroll">{#each ui.lines.slice(-7) as line}<span class="t">{new Date(line.at).toLocaleTimeString([], { hour12: false })}</span> {line.text}
 {/each}{#if ui.lines.length === 0}<span class="t">--:--:--</span> waiting
 {/if}</pre>
-      </div>
+      </details>
     </section>
   </div>
 
@@ -300,9 +335,11 @@
   }
 
   .wordmark {
-    font-size: 15px;
-    letter-spacing: 0.34em;
-    font-weight: 500;
+    font-family: var(--serif);
+    font-size: 24px;
+    letter-spacing: 0.02em;
+    font-weight: 400;
+    line-height: 1;
   }
 
   .meta {
@@ -386,6 +423,93 @@
     scrollbar-color: #2e2e33 transparent;
   }
 
+  .hero {
+    display: grid;
+    gap: 4px;
+    padding-bottom: 4px;
+  }
+
+  .hero-word {
+    font-family: var(--serif);
+    font-size: 58px;
+    line-height: 1.05;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .hero[data-state="armed"] .hero-word { color: var(--signal); }
+  .hero[data-state="amber"] .hero-word { color: var(--amber); }
+  .hero[data-state="tampered"] .hero-word { color: var(--alert); }
+  .hero[data-state="offline"] .hero-word { color: var(--dim); }
+
+  .hero-line {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .assure {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .assure-chip {
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+
+  .assure-chip[data-ok="1"] {
+    color: var(--signal);
+    border-color: #24422a;
+  }
+
+  .assure-chip[data-ok="0"] {
+    color: var(--alert);
+    border-color: #4a2626;
+  }
+
+  .more,
+  .log {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .more summary,
+  .log summary {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .more summary::-webkit-details-marker,
+  .log summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .more summary::before,
+  .log summary::before {
+    content: "+ ";
+    color: var(--muted);
+  }
+
+  .more[open] summary::before,
+  .log[open] summary::before {
+    content: "− ";
+  }
+
+  .more .kv {
+    margin-top: 10px;
+  }
+
   .hash {
     color: var(--dim);
     font-size: 11px;
@@ -419,6 +543,31 @@
     gap: 7px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border);
+  }
+
+  .attacks summary {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .attacks summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .attacks summary .label::before {
+    content: "+ ";
+    color: var(--muted);
+  }
+
+  .attacks[open] summary .label::before {
+    content: "− ";
+  }
+
+  .attacks[open] {
+    gap: 10px;
   }
 
   .group-head {

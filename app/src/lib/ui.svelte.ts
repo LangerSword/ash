@@ -1,4 +1,5 @@
 import { api, ApiError, setBase } from "./api";
+import { STATE_ART, boardState } from "./state-frames";
 import { cmd } from "./tauri";
 import { explain, type Failure } from "./failures";
 import type {
@@ -28,6 +29,7 @@ class Ui {
   private running = false;
   private tick = 0;
   private lastDevice = "";
+  private lastBoardState = "";
 
   get device() {
     return this.runtime?.device ?? null;
@@ -110,10 +112,28 @@ class Ui {
       if (this.device?.state === "ready" && this.lastDevice !== "ready") {
         this.refresh();
       }
+
+      // The board shows the same art as the window. Amber is excluded: the MCU
+      // already draws the live countdown against its own deadline.
+      const boardSt = boardState(this.mode);
+      if (this.tick > 3 && boardSt !== this.lastBoardState) {
+        this.lastBoardState = boardSt;
+        if (boardSt !== "deciding" && boardSt !== "offline") {
+          const art = STATE_ART[boardSt];
+          void api
+            .frame(art.frames, art.fps)
+            .then(() => this.event(`board · ${boardSt}`))
+            .catch(() => undefined);
+        }
+      }
       this.lastDevice = this.device?.state ?? "";
       if (this.tick % 2 === 0) {
         const l = await api.ledger();
         this.ledger = l.records;
+        // A seal you cannot verify is not a product. Check the chain unprompted.
+        if (!this.verify && l.records.length > 0) {
+          this.verify = await api.verify().catch(() => null);
+        }
       }
       if (!this.evidence) {
         this.evidence = await api.evidence().catch(() => null);

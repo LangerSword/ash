@@ -1,23 +1,36 @@
+/* Brand tokens, mirrored from site/src/styles/tokens.css so the app and the
+   website read as one product: lacquer, ivory, ember. */
 :root {
   color-scheme: dark;
 
-  --bg: #0b0b0c;
-  --surface: #121214;
-  --surface-2: #17171a;
-  --border: #222226;
-  --border-strong: #2e2e33;
+  --bg: #0b0907;
+  --surface: #100d0a;
+  --surface-2: #171310;
+  --border: #241f18;
+  --border-strong: #3a3227;
 
-  --text: #e8e8e8;
-  --muted: #8a8a8a;
-  --dim: #5f5f66;
+  --text: #f2ecdf;
+  --muted: #a49b89;
+  --dim: #857c6c;
 
-  --signal: #5ad46a;
-  --amber: #ffb020;
-  --alert: #ff5c5c;
+  --signal: #8fae8a;
+  --amber: #c69a4b;
+  --ember: #e0512f;
+  --alert: #e0512f;
 
+  --sans: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --serif: "Cormorant", "EB Garamond", Georgia, serif;
 
-  --radius: 4px;
-  --dur-fast: 120ms;
-  --dur-med: 240ms;
+  --radius: 0px;
+  --dur-fast: 140ms;
+  --dur-med: 260ms;
+}
+
+@font-face {
+  font-family: "Cormorant";
+  src: url("/fonts/cormorant.woff2") format("woff2");
+  font-weight: 300 500;
+  font-style: normal;
+  font-display: swap;
 }
